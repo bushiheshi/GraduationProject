@@ -1,0 +1,61 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>登录 - AIGC 教学平台</title>
+    <link rel="stylesheet" href="/frontend/styles.css" />
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  </head>
+  <body>
+    <div class="ambient ambient-left"></div>
+    <div class="ambient ambient-right"></div>
+
+    <main id="app" class="container auth-shell">
+      <section class="card auth-card">
+        <p class="eyebrow">AIGC Classroom</p>
+        <h1>教学 AI 平台登录</h1>
+        <p class="desc">学生登录后进入对话空间，老师登录后可保留在当前页面查看账户状态。</p>
+
+        <role-switch :role="role" @update:role="setRole"></role-switch>
+
+        <form class="form" @submit.prevent="submitLogin">
+          <label>账号</label>
+          <input v-model.trim="account" minlength="3" maxlength="64" required placeholder="请输入账号" />
+
+          <label>密码</label>
+          <input v-model="password" type="password" minlength="6" maxlength="128" required placeholder="请输入密码" />
+
+          <button class="primary" type="submit" :disabled="loading">{{ loading ? '登录中...' : '登录并进入' }}</button>
+        </form>
+
+        <p :class="['message', messageType]">{{ message }}</p>
+
+        <session-card
+          v-if="sessionUser"
+          :user="sessionUser"
+          :format-time="formatTime"
+          @enter-student="goStudent"
+          @logout="logout"
+        ></session-card>
+      </section>
+
+      <section class="card auth-aside">
+        <h2>使用说明</h2>
+        <ul class="feature-list">
+          <li>访问根路径 `http://127.0.0.1:8000/` 会固定进入登录页。</li>
+          <li>学生账号登录后跳转学生会话页，可选择模型并记录历史。</li>
+          <li>老师账号登录后停留当前页，可直接查看账户信息并退出。</li>
+        </ul>
+        <div class="hint-box">
+          <p>演示账号建议</p>
+          <strong>student001 / teacher001</strong>
+          <span>默认密码：123456</span>
+        </div>
+      </section>
+    </main>
+
+    <script src="/frontend/login.js"></script>
+  </body>
+</html>

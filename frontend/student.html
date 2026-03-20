@@ -1,0 +1,138 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>学生对话 - AIGC 教学平台</title>
+    <link rel="stylesheet" href="/frontend/styles.css" />
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+  </head>
+  <body>
+    <div class="ambient ambient-left"></div>
+    <div class="ambient ambient-right"></div>
+
+    <main id="app" class="container chat-layout">
+      <aside class="card sidebar-card">
+        <div class="sidebar-top">
+          <div>
+            <p class="eyebrow">Student Workspace</p>
+            <h1>连续对话</h1>
+          </div>
+          <button class="ghost" type="button" @click="logout">退出</button>
+        </div>
+
+        <button class="primary full-width" type="button" :disabled="creatingConversation" @click="createConversation">
+          {{ creatingConversation ? '创建中...' : '新建对话' }}
+        </button>
+
+        <div class="sidebar-note">
+          <strong>上下文控制</strong>
+          <span>每个对话仅保留最近 5 轮问答，继续同一条时自动带上最近上下文。</span>
+        </div>
+
+        <div class="sidebar-section-title">对话列表</div>
+        <div class="conversation-list">
+          <button
+            v-for="item in conversations"
+            :key="item.id"
+            type="button"
+            :class="['conversation-item', { active: item.id === activeConversationId }]"
+            @click="openConversation(item.id)"
+          >
+            <span class="conversation-title">{{ item.title }}</span>
+            <span class="conversation-meta">{{ item.record_count }}/5 轮 · {{ formatShortTime(item.last_generated_at || item.updated_at) }}</span>
+          </button>
+          <div v-if="conversations.length === 0" class="conversation-empty">暂无对话，点击上方“新建对话”开始。</div>
+        </div>
+      </aside>
+
+      <section class="chat-main">
+        <section class="card chat-header-card">
+          <div>
+            <p class="eyebrow">Conversation</p>
+            <h2>{{ activeConversation ? activeConversation.title : '未选择对话' }}</h2>
+            <p class="desc" v-if="user">当前用户：{{ user.name }}（{{ user.account }}）</p>
+          </div>
+
+          <div class="chat-header-actions">
+            <label class="compact-field">
+              <span>模型</span>
+              <select v-model="selectedModel">
+                <option v-for="m in models" :key="m.key" :value="m.key">
+                  {{ m.model_name }}
+                </option>
+              </select>
+            </label>
+          </div>
+        </section>
+
+        <section class="card thread-card">
+          <div class="thread-scroll" ref="threadScroll" @click="handleMarkdownClick">
+            <div v-if="!activeConversationId" class="thread-empty">
+              <h3>从左侧新建一条对话</h3>
+              <p>之后点击对应条目即可继续原来的上下文，系统会自动限制为最近 5 轮。</p>
+            </div>
+
+            <div v-else-if="records.length === 0" class="thread-empty">
+              <h3>这条对话还没有消息</h3>
+              <p>在下方输入问题后，会将这一条作为连续对话的起点。</p>
+            </div>
+
+            <div v-else class="turn-list">
+              <article v-for="item in records" :key="item.id" class="turn-block">
+                <div class="message-row user-row">
+                  <div class="message-bubble user-bubble">
+                    <div class="message-label">你</div>
+                    <div class="user-text">{{ item.prompt }}</div>
+                  </div>
+                </div>
+
+                <div class="message-row assistant-row">
+                  <div class="message-bubble assistant-bubble">
+                    <div class="message-head">
+                      <span class="message-label">{{ item.model_name }}</span>
+                      <span class="message-time">{{ formatTime(item.generated_at) }}</span>
+                    </div>
+                    <div class="markdown-body" v-html="renderMarkdown(item.content)"></div>
+                    <div v-if="item.citations && item.citations.length" class="message-citations">
+                      <span>参考：</span>
+                      <template v-for="(citation, idx) in item.citations" :key="`${item.id}-${idx}`">
+                        <a v-if="isLikelyUrl(citation)" :href="citation" target="_blank" rel="noreferrer noopener">
+                          {{ citation }}
+                        </a>
+                        <span v-else>{{ citation }}</span>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="card composer-card">
+          <label class="block-title">继续当前对话</label>
+          <textarea
+            v-model.trim="prompt"
+            rows="4"
+            maxlength="8000"
+            placeholder="输入你的问题，系统会自动带上当前对话最近 5 轮内的上下文。"
+            @keydown.enter.exact.prevent="submitPrompt"
+          ></textarea>
+          <div class="composer-actions">
+            <p :class="['message', messageType]">{{ message }}</p>
+            <button class="primary" type="button" :disabled="loading || !selectedModel" @click="submitPrompt">
+              {{ loading ? '生成中...' : '发送' }}
+            </button>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="/frontend/student.js"></script>
+  </body>
+</html>
+

@@ -1,0 +1,60 @@
+﻿from datetime import datetime
+from enum import Enum
+
+from sqlalchemy import BIGINT, JSON, Boolean, DateTime, Enum as SqlEnum, ForeignKey, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.database import Base
+
+
+class UserRole(str, Enum):
+    STUDENT = 'student'
+    TEACHER = 'teacher'
+
+
+class User(Base):
+    __tablename__ = 'users'
+
+    id: Mapped[int] = mapped_column(BIGINT, primary_key=True, index=True)
+    account: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(64), nullable=False)
+    role: Mapped[UserRole] = mapped_column(SqlEnum(UserRole), nullable=False, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+
+class ChatConversation(Base):
+    __tablename__ = 'chat_conversations'
+
+    id: Mapped[int] = mapped_column(BIGINT, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('users.id'), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(120), nullable=False, default='新对话')
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+        index=True,
+    )
+
+
+class ChatRecord(Base):
+    __tablename__ = 'chat_records'
+
+    id: Mapped[int] = mapped_column(BIGINT, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('users.id'), nullable=False, index=True)
+    conversation_id: Mapped[int | None] = mapped_column(BIGINT, ForeignKey('chat_conversations.id'), nullable=True, index=True)
+    model_name: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    generated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    citations: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)

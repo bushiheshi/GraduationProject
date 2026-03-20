@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AIGC 教学测试平台</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="bg-orb orb-one"></div>
+    <div class="bg-orb orb-two"></div>
+    <div class="grain"></div>
+
+    <main class="layout">
+      <section class="hero card reveal" style="--delay: 80ms">
+        <p class="eyebrow">AIGC Classroom Lab</p>
+        <h1>教学 AI 测试平台</h1>
+        <p class="subtitle">
+          为学生提供受控 AI 使用入口，为教师提供可追溯的登录与账号基础。
+          当前版本支持学生/老师双角色登录、模型切换与学生对话元数据记录。
+        </p>
+
+        <div class="pill-row">
+          <span class="pill">Student Login</span>
+          <span class="pill">Teacher Login</span>
+          <span class="pill">Qwen + DeepSeek</span>
+          <span class="pill">Chat Metadata Log</span>
+        </div>
+
+        <div class="stats">
+          <div class="stat reveal" style="--delay: 160ms">
+            <p>接口</p>
+            <strong>/api/auth/* + /api/chat/*</strong>
+          </div>
+          <div class="stat reveal" style="--delay: 220ms">
+            <p>数据库</p>
+            <strong>MySQL 8+</strong>
+          </div>
+          <div class="stat reveal" style="--delay: 280ms">
+            <p>演示账号</p>
+            <strong>student001 / teacher001</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel reveal" style="--delay: 120ms">
+        <div class="tabs" role="tablist" aria-label="登录角色切换">
+          <button class="tab active" id="tab-student" data-role="student" type="button">学生登录</button>
+          <button class="tab" id="tab-teacher" data-role="teacher" type="button">老师登录</button>
+        </div>
+
+        <form id="login-form" class="form" autocomplete="on">
+          <div class="field">
+            <label for="account">账号</label>
+            <input id="account" name="account" placeholder="请输入账号" required minlength="3" maxlength="64" />
+          </div>
+
+          <div class="field">
+            <label for="password">密码</label>
+            <input id="password" name="password" type="password" placeholder="请输入密码" required minlength="6" maxlength="128" />
+          </div>
+
+          <button id="submit-btn" type="submit" class="primary-btn">登录并获取 Token</button>
+        </form>
+
+        <div id="message" class="message" aria-live="polite"></div>
+
+        <div id="user-card" class="user-card hidden">
+          <p class="user-title">当前登录信息</p>
+          <div class="user-grid">
+            <span>账号</span><strong id="u-account">-</strong>
+            <span>姓名</span><strong id="u-name">-</strong>
+            <span>角色</span><strong id="u-role">-</strong>
+            <span>创建时间</span><strong id="u-created">-</strong>
+          </div>
+
+          <div class="token-wrap">
+            <p>Access Token</p>
+            <textarea id="token-box" readonly></textarea>
+          </div>
+
+          <button id="logout-btn" type="button" class="ghost-btn">退出登录</button>
+        </div>
+
+        <div id="student-chat" class="student-chat hidden">
+          <p class="user-title">学生对话区</p>
+
+          <div class="field">
+            <label for="model-select">选择模型</label>
+            <select id="model-select"></select>
+          </div>
+
+          <div class="field">
+            <label for="prompt-input">学生提示词</label>
+            <textarea id="prompt-input" placeholder="请输入你的问题"></textarea>
+          </div>
+
+          <button id="chat-submit-btn" type="button" class="primary-btn">发送到模型</button>
+          <div id="chat-message" class="message" aria-live="polite"></div>
+
+          <div class="chat-block">
+            <p>生成内容</p>
+            <textarea id="content-box" readonly></textarea>
+          </div>
+
+          <div class="chat-meta">
+            <span>模型名称</span><strong id="meta-model">-</strong>
+            <span>生成时间</span><strong id="meta-time">-</strong>
+          </div>
+
+          <div class="chat-block">
+            <p>引用文献或资料</p>
+            <ul id="citation-list" class="citation-list"></ul>
+          </div>
+
+          <div class="chat-block history-block">
+            <div class="history-head">
+              <p>最近记录</p>
+              <button id="refresh-history-btn" type="button" class="mini-btn">刷新</button>
+            </div>
+            <div id="history-list" class="history-list"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
