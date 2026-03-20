@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
@@ -10,31 +10,33 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
   </head>
-  <body>
+  <body class="student-page">
     <div class="ambient ambient-left"></div>
     <div class="ambient ambient-right"></div>
 
-    <main id="app" class="container chat-layout">
-      <aside class="card sidebar-card">
-        <div class="sidebar-top">
-          <div>
-            <p class="eyebrow">Student Workspace</p>
-            <h1>连续对话</h1>
+    <main id="app" class="workspace-app">
+      <aside class="workspace-sidebar">
+        <div class="workspace-sidebar-top">
+          <div class="workspace-brand">
+            <div class="workspace-brand-mark">AI</div>
+            <div class="workspace-brand-copy">
+              <strong>AIGC Classroom</strong>
+              <span>Student Workspace</span>
+            </div>
           </div>
-          <button class="ghost" type="button" @click="logout">退出</button>
+          <button class="ghost workspace-logout" type="button" @click="logout">退出</button>
         </div>
 
-        <button class="primary full-width" type="button" :disabled="creatingConversation" @click="createConversation">
-          {{ creatingConversation ? '创建中...' : '新建对话' }}
+        <button class="primary workspace-new-chat" type="button" :disabled="creatingConversation" @click="createConversation">
+          {{ creatingConversation ? '创建中...' : '新对话' }}
         </button>
 
-        <div class="sidebar-note">
-          <strong>上下文控制</strong>
-          <span>每个对话仅保留最近 5 轮问答，继续同一条时自动带上最近上下文。</span>
+        <div class="workspace-sidebar-meta">
+          <span>历史记录</span>
+          <span>{{ conversations.length }} 条</span>
         </div>
 
-        <div class="sidebar-section-title">对话列表</div>
-        <div class="conversation-list">
+        <div class="conversation-list workspace-conversation-list">
           <button
             v-for="item in conversations"
             :key="item.id"
@@ -45,20 +47,28 @@
             <span class="conversation-title">{{ item.title }}</span>
             <span class="conversation-meta">{{ item.record_count }}/5 轮 · {{ formatShortTime(item.last_generated_at || item.updated_at) }}</span>
           </button>
-          <div v-if="conversations.length === 0" class="conversation-empty">暂无对话，点击上方“新建对话”开始。</div>
+          <div v-if="conversations.length === 0" class="conversation-empty">暂无历史对话，点击上方“新对话”开始。</div>
+        </div>
+
+        <div v-if="user" class="workspace-sidebar-footer">
+          <div class="workspace-user-avatar">{{ user.name ? user.name.slice(0, 1) : 'S' }}</div>
+          <div class="workspace-user-copy">
+            <strong>{{ user.name }}</strong>
+            <span>{{ user.account }}</span>
+          </div>
         </div>
       </aside>
 
-      <section class="chat-main">
-        <section class="card chat-header-card">
-          <div>
-            <p class="eyebrow">Conversation</p>
-            <h2>{{ activeConversation ? activeConversation.title : '未选择对话' }}</h2>
-            <p class="desc" v-if="user">当前用户：{{ user.name }}（{{ user.account }}）</p>
+      <section class="workspace-main">
+        <header class="workspace-topbar">
+          <div class="workspace-topbar-copy">
+            <p class="workspace-overline">当前对话</p>
+            <h1>{{ activeConversation ? activeConversation.title : '选择左侧历史记录或新建对话' }}</h1>
+            <p class="workspace-subtitle" v-if="user">当前用户：{{ user.name }}（{{ user.account }}）</p>
           </div>
 
-          <div class="chat-header-actions">
-            <label class="compact-field">
+          <div class="workspace-topbar-actions">
+            <label class="workspace-model-field">
               <span>模型</span>
               <select v-model="selectedModel">
                 <option v-for="m in models" :key="m.key" :value="m.key">
@@ -67,30 +77,32 @@
               </select>
             </label>
           </div>
-        </section>
+        </header>
 
-        <section class="card thread-card">
-          <div class="thread-scroll" ref="threadScroll" @click="handleMarkdownClick">
-            <div v-if="!activeConversationId" class="thread-empty">
-              <h3>从左侧新建一条对话</h3>
-              <p>之后点击对应条目即可继续原来的上下文，系统会自动限制为最近 5 轮。</p>
+        <section class="workspace-thread-shell">
+          <div class="thread-scroll workspace-thread-scroll" ref="threadScroll" @click="handleMarkdownClick">
+            <div v-if="!activeConversationId" class="thread-empty workspace-thread-empty">
+              <h3>从左侧开始一条新对话</h3>
+              <p>历史记录固定在左侧，切换任意条目后即可继续上下文。</p>
             </div>
 
-            <div v-else-if="records.length === 0" class="thread-empty">
+            <div v-else-if="records.length === 0" class="thread-empty workspace-thread-empty">
               <h3>这条对话还没有消息</h3>
-              <p>在下方输入问题后，会将这一条作为连续对话的起点。</p>
+              <p>在下方输入问题后，会把这次提问作为连续对话的起点。</p>
             </div>
 
-            <div v-else class="turn-list">
+            <div v-else class="turn-list workspace-turn-list">
               <article v-for="item in records" :key="item.id" class="turn-block">
                 <div class="message-row user-row">
                   <div class="message-bubble user-bubble">
                     <div class="message-label">你</div>
                     <div class="user-text">{{ item.prompt }}</div>
                   </div>
+                  <div class="message-avatar user-avatar">{{ user && user.name ? user.name.slice(0, 1) : '我' }}</div>
                 </div>
 
                 <div class="message-row assistant-row">
+                  <div class="message-avatar assistant-avatar">AI</div>
                   <div class="message-bubble assistant-bubble">
                     <div class="message-head">
                       <span class="message-label">{{ item.model_name }}</span>
@@ -113,18 +125,24 @@
           </div>
         </section>
 
-        <section class="card composer-card">
-          <label class="block-title">继续当前对话</label>
+        <section class="workspace-composer-shell">
+          <div class="workspace-composer-toolbar">
+            <span class="workspace-chip">{{ selectedModel ? `模型：${selectedModel}` : '请选择模型' }}</span>
+            <span class="workspace-chip">{{ activeConversation ? `${records.length} / 5 轮上下文` : '尚未进入对话' }}</span>
+            <span class="workspace-chip">Enter 发送</span>
+          </div>
+
           <textarea
             v-model.trim="prompt"
             rows="4"
             maxlength="8000"
-            placeholder="输入你的问题，系统会自动带上当前对话最近 5 轮内的上下文。"
+            placeholder="给当前对话继续发送消息，系统会自动带上最近 5 轮上下文。"
             @keydown.enter.exact.prevent="submitPrompt"
           ></textarea>
+
           <div class="composer-actions">
             <p :class="['message', messageType]">{{ message }}</p>
-            <button class="primary" type="button" :disabled="loading || !selectedModel" @click="submitPrompt">
+            <button class="primary workspace-send" type="button" :disabled="loading || !selectedModel" @click="submitPrompt">
               {{ loading ? '生成中...' : '发送' }}
             </button>
           </div>
@@ -135,4 +153,3 @@
     <script src="/frontend/student.js"></script>
   </body>
 </html>
-
