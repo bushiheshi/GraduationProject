@@ -54,6 +54,8 @@ class ChatConversationResponse(BaseModel):
     updated_at: datetime
     last_generated_at: datetime | None = None
     record_count: int
+    submission_count: int = 0
+    last_submitted_at: datetime | None = None
 
 
 class ChatCompletionRequest(BaseModel):
@@ -76,3 +78,47 @@ class ChatRecordResponse(BaseModel):
 
 class ChatCompletionResponse(ChatRecordResponse):
     conversation_title: str
+
+
+class HomeworkSubmissionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    conversation_id: int
+    conversation_title: str
+    model_name: str
+    prompt: str
+    content: str
+    citations: list[str]
+    source_generated_at: datetime
+    submitted_at: datetime
+
+
+class CodeDetectionRequest(BaseModel):
+    # 这里只接收单份代码文本；文件名和语言只用于回显与日志，不参与强依赖判断。
+    code: str = Field(min_length=1, max_length=200000)
+    filename: str | None = Field(default=None, max_length=255)
+    language: str | None = Field(default=None, max_length=64)
+
+
+class CodeChunkScore(BaseModel):
+    chunk_index: int
+    start_offset: int
+    end_offset: int
+    machine_generated_probability: float
+    human_generated_probability: float
+
+
+class CodeDetectionResponse(BaseModel):
+    model_id: str
+    filename: str | None = None
+    language: str | None = None
+    label: str
+    confidence: float
+    threshold: float
+    machine_generated_probability: float
+    human_generated_probability: float
+    code_length: int
+    chunk_count: int
+    explanation: str
+    chunk_scores: list[CodeChunkScore]

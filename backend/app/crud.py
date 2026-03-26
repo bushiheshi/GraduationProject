@@ -5,7 +5,7 @@ from typing import Any
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from app.models import ChatConversation, ChatRecord, User, UserRole
+from app.models import ChatConversation, ChatRecord, HomeworkSubmission, User, UserRole
 
 DEFAULT_CONVERSATION_TITLE = '新对话'
 
@@ -85,12 +85,31 @@ def list_chat_conversations_by_user(db: Session, *, user_id: int) -> list[dict[s
         for row in stats_rows
         if row[0] is not None
     }
+    submission_rows = db.execute(
+        select(
+            HomeworkSubmission.conversation_id,
+            func.count(HomeworkSubmission.id),
+            func.max(HomeworkSubmission.submitted_at),
+        )
+        .where(HomeworkSubmission.conversation_id.in_(conversation_ids))
+        .group_by(HomeworkSubmission.conversation_id)
+    ).all()
+    submission_stats = {
+        row[0]: {
+            'submission_count': int(row[1] or 0),
+            'last_submitted_at': row[2],
+        }
+        for row in submission_rows
+        if row[0] is not None
+    }
 
     return [
         {
             'conversation': conversation,
             'record_count': stats.get(conversation.id, {}).get('record_count', 0),
             'last_generated_at': stats.get(conversation.id, {}).get('last_generated_at'),
+            'submission_count': submission_stats.get(conversation.id, {}).get('submission_count', 0),
+            'last_submitted_at': submission_stats.get(conversation.id, {}).get('last_submitted_at'),
         }
         for conversation in conversations
     ]
@@ -172,6 +191,24 @@ def list_chat_records_by_conversation(
     return list(db.scalars(stmt).all())
 
 
+def get_latest_chat_record_by_conversation(
+    db: Session,
+    *,
+    conversation_id: int,
+    user_id: int,
+) -> ChatRecord | None:
+    stmt = (
+        select(ChatRecord)
+        .where(
+            ChatRecord.conversation_id == conversation_id,
+            ChatRecord.user_id == user_id,
+        )
+        .order_by(ChatRecord.generated_at.desc(), ChatRecord.id.desc())
+        .limit(1)
+    )
+    return db.scalar(stmt)
+
+
 def list_recent_chat_records_for_context(
     db: Session,
     *,
@@ -195,6 +232,33 @@ def list_recent_chat_records_for_context(
     )
     records.reverse()
     return records
+
+
+def create_homework_submission(
+    db: Session,
+    *,
+    conversation: ChatConversation,
+    user_id: int,
+    record: ChatRecord,
+    submitted_at: datetime | None = None,
+) -> HomeworkSubmission:
+    timestamp = submitted_at or datetime.utcnow()
+    submission = HomeworkSubmission(
+        user_id=user_id,
+        conversation_id=conversation.id,
+        conversation_title=conversation.title,
+        model_name=record.model_name,
+        prompt=record.prompt,
+        content=record.content,
+        citations=record.citations,
+        source_generated_at=record.generated_at,
+        submitted_at=timestamp,
+        created_at=timestamp,
+    )
+    db.add(submission)
+    db.commit()
+    db.refresh(submission)
+    return submission
 
 
 def _should_replace_conversation_title(title: str | None) -> bool:

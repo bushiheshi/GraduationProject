@@ -47,3 +47,23 @@ CREATE TABLE IF NOT EXISTS chat_records (
   CONSTRAINT fk_chat_records_user_id FOREIGN KEY (user_id) REFERENCES users(id),
   CONSTRAINT fk_chat_records_conversation_id FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS homework_submissions (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  conversation_id BIGINT NOT NULL,
+  conversation_title VARCHAR(120) NOT NULL,
+  model_name VARCHAR(64) NOT NULL,
+  source_generated_at DATETIME NOT NULL,
+  submitted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  prompt TEXT NOT NULL,
+  content LONGTEXT NOT NULL,
+  citations JSON NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_homework_submissions_user_id (user_id),
+  KEY idx_homework_submissions_conversation_id (conversation_id),
+  KEY idx_homework_submissions_submitted_at (submitted_at),
+  CONSTRAINT fk_homework_submissions_user_id FOREIGN KEY (user_id) REFERENCES users(id),
+  CONSTRAINT fk_homework_submissions_conversation_id FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

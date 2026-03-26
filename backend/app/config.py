@@ -32,6 +32,14 @@ class Settings(BaseSettings):
     chat_timeout_seconds: int = 90
     chat_conversation_turn_limit: int = 5
 
+    # 代码检测模型相关配置：当前目标模型是作者自定义结构，不是标准 SequenceClassification 模型。
+    code_detect_model_id: str = 'project-droid/DroidDetect-Large-Binary'
+    code_detect_base_model_id: str = 'answerdotai/ModernBERT-large'
+    code_detect_threshold: float = 0.6
+    code_detect_chunk_chars: int = 6000
+    code_detect_chunk_overlap_chars: int = 800
+    code_detect_max_length: int = 2048
+
     @property
     def sqlalchemy_database_uri(self) -> str:
         return (
@@ -43,5 +51,3 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-
-

@@ -1707,6 +1707,11 @@ body.student-page .workspace-chip {
   font-weight: 600;
 }
 
+body.student-page .workspace-chip-submitted {
+  background: #eaf7ef;
+  color: #18794e;
+}
+
 body.student-page .workspace-composer-shell textarea {
   min-height: 120px;
   border: 1px solid rgba(24, 33, 39, 0.08);
@@ -1723,6 +1728,28 @@ body.student-page .workspace-send {
   border-radius: 12px;
   background: linear-gradient(145deg, #4b6bff, #6d8cff);
   box-shadow: 0 12px 22px rgba(75, 107, 255, 0.2);
+}
+
+body.student-page .workspace-action-group {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+body.student-page .workspace-submit-homework {
+  min-width: 148px;
+  margin-top: 0;
+  border: 1px solid rgba(75, 107, 255, 0.14);
+  border-radius: 12px;
+  background: #f7f9ff;
+  color: #314055;
+  box-shadow: none;
+}
+
+body.student-page .workspace-submit-homework:hover {
+  background: #eef3ff;
 }
 
 @media (max-width: 1080px) {
@@ -1790,6 +1817,13 @@ body.student-page .workspace-send {
     align-items: stretch;
   }
 
+  body.student-page .workspace-action-group {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  body.student-page .workspace-submit-homework,
   body.student-page .workspace-send {
     width: 100%;
   }

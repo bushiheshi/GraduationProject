@@ -114,6 +114,7 @@ createApp({
       prompt: '',
       loading: false,
       creatingConversation: false,
+      submittingHomework: false,
       message: '',
       messageType: '',
     };
@@ -121,6 +122,36 @@ createApp({
   computed: {
     activeConversation() {
       return this.conversations.find((item) => item.id === this.activeConversationId) || null;
+    },
+
+    latestRecord() {
+      return this.records.length ? this.records[this.records.length - 1] : null;
+    },
+
+    canSubmitHomework() {
+      return Boolean(this.activeConversationId && this.latestRecord && !this.loading && !this.submittingHomework);
+    },
+
+    hasActiveSubmission() {
+      return Boolean(this.activeConversation && this.activeConversation.submission_count > 0);
+    },
+
+    activeConversationSubmissionText() {
+      if (!this.activeConversation) {
+        return '尚未进入对话';
+      }
+
+      const submissionCount = Number(this.activeConversation.submission_count || 0);
+      if (!submissionCount) {
+        return '未提交最终作业';
+      }
+
+      const lastSubmittedAt = this.activeConversation.last_submitted_at
+        ? this.formatShortTime(this.activeConversation.last_submitted_at)
+        : '';
+      return lastSubmittedAt
+        ? `已提交 ${submissionCount} 次 · 最近 ${lastSubmittedAt}`
+        : `已提交 ${submissionCount} 次`;
     },
   },
   async mounted() {
@@ -287,6 +318,38 @@ createApp({
         this.messageType = 'error';
       } finally {
         this.loading = false;
+      }
+    },
+
+    async submitHomework() {
+      if (!this.activeConversationId) {
+        this.message = '请先选择一条对话';
+        this.messageType = 'error';
+        return;
+      }
+
+      if (!this.latestRecord) {
+        this.message = '当前对话还没有可提交的作业内容';
+        this.messageType = 'error';
+        return;
+      }
+
+      this.submittingHomework = true;
+      this.message = '正在提交最终作业...';
+      this.messageType = '';
+
+      try {
+        const result = await this.request(`/api/chat/conversations/${this.activeConversationId}/submissions`, {
+          method: 'POST',
+        });
+        await this.loadConversations({ focusConversationId: this.activeConversationId });
+        this.message = `最终作业已提交并记录，提交时间：${this.formatTime(result.submitted_at)}`;
+        this.messageType = 'success';
+      } catch (error) {
+        this.message = error.message || '提交作业失败';
+        this.messageType = 'error';
+      } finally {
+        this.submittingHomework = false;
       }
     },
 

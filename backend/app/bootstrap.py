@@ -6,8 +6,9 @@ from app.security import get_password_hash
 
 
 def create_tables() -> None:
-    # 根据当前 ORM 模型创建缺失的表；已存在的表会被跳过。
-    Base.metadata.create_all(bind=engine)
+    # 先创建与历史数据库类型兼容性要求较低的表；其余表走后续自适应迁移逻辑。
+    tables = [table for name, table in Base.metadata.tables.items() if name != 'homework_submissions']
+    Base.metadata.create_all(bind=engine, tables=tables)
 
 
 def _get_columns_by_name(inspector, table_name: str) -> dict[str, dict]:
@@ -180,6 +181,115 @@ def ensure_chat_schema() -> None:
             )
 
 
+def ensure_homework_submission_schema() -> None:
+    inspector = inspect(engine)
+    table_names = set(inspector.get_table_names())
+    if 'users' not in table_names or 'chat_conversations' not in table_names:
+        return
+
+    user_columns = _get_columns_by_name(inspector, 'users')
+    conversation_columns = _get_columns_by_name(inspector, 'chat_conversations')
+    target_user_id_type = _compile_column_type(user_columns['id'])
+    target_conversation_id_type = _compile_column_type(conversation_columns['id'])
+
+    if 'homework_submissions' not in table_names:
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    'CREATE TABLE homework_submissions ('
+                    'id BIGINT NOT NULL AUTO_INCREMENT, '
+                    f'user_id {target_user_id_type} NOT NULL, '
+                    f'conversation_id {target_conversation_id_type} NOT NULL, '
+                    'conversation_title VARCHAR(120) NOT NULL, '
+                    'model_name VARCHAR(64) NOT NULL, '
+                    'prompt TEXT NOT NULL, '
+                    'content LONGTEXT NOT NULL, '
+                    'citations JSON NOT NULL, '
+                    'source_generated_at DATETIME NOT NULL, '
+                    'submitted_at DATETIME NOT NULL, '
+                    'created_at DATETIME NOT NULL, '
+                    'PRIMARY KEY (id), '
+                    'KEY idx_homework_submissions_user_id (user_id), '
+                    'KEY idx_homework_submissions_conversation_id (conversation_id), '
+                    'KEY idx_homework_submissions_submitted_at (submitted_at), '
+                    'CONSTRAINT fk_homework_submissions_user_id FOREIGN KEY (user_id) REFERENCES users(id), '
+                    'CONSTRAINT fk_homework_submissions_conversation_id FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id)'
+                    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
+                )
+            )
+        return
+
+    columns = _get_columns_by_name(inspector, 'homework_submissions')
+    indexes = inspector.get_indexes('homework_submissions')
+    foreign_keys = inspector.get_foreign_keys('homework_submissions')
+
+    user_id_type = _compile_column_type(columns['user_id'])
+    conversation_id_type = _compile_column_type(columns['conversation_id'])
+    user_fk_name = _find_foreign_key_name(
+        foreign_keys,
+        referred_table='users',
+        constrained_columns=['user_id'],
+    )
+    conversation_fk_name = _find_foreign_key_name(
+        foreign_keys,
+        referred_table='chat_conversations',
+        constrained_columns=['conversation_id'],
+    )
+    has_user_fk = bool(user_fk_name)
+    has_conversation_fk = bool(conversation_fk_name)
+    has_user_index = any(index.get('column_names') == ['user_id'] for index in indexes)
+    has_conversation_index = any(index.get('column_names') == ['conversation_id'] for index in indexes)
+    has_submitted_at_index = any(index.get('column_names') == ['submitted_at'] for index in indexes)
+
+    with engine.begin() as conn:
+        if has_user_fk and user_id_type != target_user_id_type:
+            conn.execute(text(f'ALTER TABLE homework_submissions DROP FOREIGN KEY `{user_fk_name}`'))
+            has_user_fk = False
+        if has_conversation_fk and conversation_id_type != target_conversation_id_type:
+            conn.execute(text(f'ALTER TABLE homework_submissions DROP FOREIGN KEY `{conversation_fk_name}`'))
+            has_conversation_fk = False
+
+        if user_id_type != target_user_id_type or columns['user_id'].get('nullable', True):
+            conn.execute(
+                text(
+                    'ALTER TABLE homework_submissions '
+                    f'MODIFY COLUMN user_id {target_user_id_type} NOT NULL'
+                )
+            )
+        if conversation_id_type != target_conversation_id_type or columns['conversation_id'].get('nullable', True):
+            conn.execute(
+                text(
+                    'ALTER TABLE homework_submissions '
+                    f'MODIFY COLUMN conversation_id {target_conversation_id_type} NOT NULL'
+                )
+            )
+
+        if not has_user_index:
+            conn.execute(text('CREATE INDEX idx_homework_submissions_user_id ON homework_submissions (user_id)'))
+        if not has_conversation_index:
+            conn.execute(
+                text('CREATE INDEX idx_homework_submissions_conversation_id ON homework_submissions (conversation_id)')
+            )
+        if not has_submitted_at_index:
+            conn.execute(text('CREATE INDEX idx_homework_submissions_submitted_at ON homework_submissions (submitted_at)'))
+        if not has_user_fk:
+            conn.execute(
+                text(
+                    'ALTER TABLE homework_submissions '
+                    'ADD CONSTRAINT fk_homework_submissions_user_id '
+                    'FOREIGN KEY (user_id) REFERENCES users(id)'
+                )
+            )
+        if not has_conversation_fk:
+            conn.execute(
+                text(
+                    'ALTER TABLE homework_submissions '
+                    'ADD CONSTRAINT fk_homework_submissions_conversation_id '
+                    'FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id)'
+                )
+            )
+
+
 def migrate_legacy_chat_records() -> None:
     db = SessionLocal()
     try:
@@ -245,6 +355,7 @@ def init_app_database(*, seed_demo_users: bool = True) -> None:
     create_tables()
     ensure_conversation_schema()
     ensure_chat_schema()
+    ensure_homework_submission_schema()
     migrate_legacy_chat_records()
 
     if seed_demo_users:

@@ -3,8 +3,10 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.crud import (
+    create_homework_submission,
     create_chat_conversation,
     get_chat_conversation_by_id,
+    get_latest_chat_record_by_conversation,
     list_chat_conversations_by_user,
     list_chat_records_by_conversation,
     list_chat_records_by_user,
@@ -18,7 +20,7 @@ from app.llm_service import (
     generate_completion,
     list_supported_models,
 )
-from app.models import ChatRecord, UserRole
+from app.models import ChatRecord, HomeworkSubmission, UserRole
 from app.schemas import (
     ChatCompletionRequest,
     ChatCompletionResponse,
@@ -26,6 +28,7 @@ from app.schemas import (
     ChatConversationResponse,
     ChatModelInfo,
     ChatRecordResponse,
+    HomeworkSubmissionResponse,
 )
 
 router = APIRouter(prefix='/api/chat', tags=['chat'])
@@ -89,6 +92,40 @@ def get_conversation_records(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Conversation not found')
 
     return list_chat_records_by_conversation(db, conversation_id=conversation_id, user_id=current_user.id)
+
+
+@router.post(
+    '/conversations/{conversation_id}/submissions',
+    response_model=HomeworkSubmissionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def submit_homework(
+    conversation_id: int,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role != UserRole.STUDENT:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Only students can submit homework')
+
+    conversation = get_chat_conversation_by_id(db, conversation_id=conversation_id, user_id=current_user.id)
+    if not conversation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Conversation not found')
+
+    latest_record = get_latest_chat_record_by_conversation(
+        db,
+        conversation_id=conversation_id,
+        user_id=current_user.id,
+    )
+    if not latest_record:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='当前对话还没有可提交的作业内容')
+
+    submission = create_homework_submission(
+        db,
+        conversation=conversation,
+        user_id=current_user.id,
+        record=latest_record,
+    )
+    return _to_homework_submission_response(submission)
 
 
 @router.post('/completions', response_model=ChatCompletionResponse)
@@ -186,5 +223,21 @@ def _to_conversation_response(item: dict) -> ChatConversationResponse:
         updated_at=conversation.updated_at,
         last_generated_at=item.get('last_generated_at'),
         record_count=int(item.get('record_count') or 0),
+        submission_count=int(item.get('submission_count') or 0),
+        last_submitted_at=item.get('last_submitted_at'),
+    )
+
+
+def _to_homework_submission_response(item: HomeworkSubmission) -> HomeworkSubmissionResponse:
+    return HomeworkSubmissionResponse(
+        id=item.id,
+        conversation_id=item.conversation_id,
+        conversation_title=item.conversation_title,
+        model_name=item.model_name,
+        prompt=item.prompt,
+        content=item.content,
+        citations=item.citations,
+        source_generated_at=item.source_generated_at,
+        submitted_at=item.submitted_at,
     )
 

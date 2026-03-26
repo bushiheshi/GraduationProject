@@ -27,6 +27,12 @@ DEEPSEEK_MODEL=deepseek-chat
 
 CHAT_TIMEOUT_SECONDS=90
 CHAT_CONVERSATION_TURN_LIMIT=5
+
+CODE_DETECT_MODEL_ID=project-droid/DroidDetect-Large-Binary
+CODE_DETECT_THRESHOLD=0.6
+CODE_DETECT_CHUNK_CHARS=6000
+CODE_DETECT_CHUNK_OVERLAP_CHARS=800
+CODE_DETECT_MAX_LENGTH=2048
 ```
 
 3. Install dependencies:
@@ -72,6 +78,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - `POST /api/chat/conversations` 新建一条对话
 - `GET /api/chat/conversations/{conversation_id}/records` 获取某条对话当前保留的问答记录
 - `POST /api/chat/completions` 在指定对话中继续发起对话并落库
+- `POST /api/chat/conversations/{conversation_id}/submissions` 将当前对话最近一轮问答作为最终作业提交并落库
 
 说明：
 - 系统会按对话维度保存上下文。
@@ -97,7 +104,30 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - 生成内容（`content`）
 - 学生提示词（`prompt`）
 
+最终作业提交说明：
+- 学生点击学生页中的“提交最终作业”按钮后，系统会把当前对话最近一轮问答快照保存到 `homework_submissions` 表。
+- 提交记录会额外保存提交时间（`submitted_at`），即使后续对话继续进行或旧聊天记录被裁剪，已提交的作业快照仍会保留。
+
+### Code Detection (teacher only)
+
+- `POST /api/detect/code` 检测一段代码更偏向人工编写还是 AI 生成
+
+说明：
+- 当前接口默认只允许教师账号调用。
+- 后端默认使用 `project-droid/DroidDetect-Large-Binary`。
+- 长代码会自动切片后分别打分，再按片段长度做加权平均。
+- 返回结果包含总分、阈值、结论，以及每个代码分片的独立分数，便于后续做教师端展示。
+
+请求体示例：
+
+```json
+{
+  "filename": "homework.py",
+  "language": "python",
+  "code": "def hello():\n    print('hello world')"
+}
+```
+
 ## 4. Other
 
 - `GET /health`
-

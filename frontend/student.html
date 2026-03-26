@@ -45,7 +45,10 @@
             @click="openConversation(item.id)"
           >
             <span class="conversation-title">{{ item.title }}</span>
-            <span class="conversation-meta">{{ item.record_count }}/5 轮 · {{ formatShortTime(item.last_generated_at || item.updated_at) }}</span>
+            <span class="conversation-meta">
+              {{ item.record_count }}/5 轮 · {{ formatShortTime(item.last_generated_at || item.updated_at) }}
+              <template v-if="item.submission_count"> · 已提交 {{ item.submission_count }} 次</template>
+            </span>
           </button>
           <div v-if="conversations.length === 0" class="conversation-empty">暂无历史对话，点击上方“新对话”开始。</div>
         </div>
@@ -129,6 +132,7 @@
           <div class="workspace-composer-toolbar">
             <span class="workspace-chip">{{ selectedModel ? `模型：${selectedModel}` : '请选择模型' }}</span>
             <span class="workspace-chip">{{ activeConversation ? `${records.length} / 5 轮上下文` : '尚未进入对话' }}</span>
+            <span :class="['workspace-chip', { 'workspace-chip-submitted': hasActiveSubmission }]">{{ activeConversationSubmissionText }}</span>
             <span class="workspace-chip">Enter 发送</span>
           </div>
 
@@ -142,9 +146,19 @@
 
           <div class="composer-actions">
             <p :class="['message', messageType]">{{ message }}</p>
-            <button class="primary workspace-send" type="button" :disabled="loading || !selectedModel" @click="submitPrompt">
-              {{ loading ? '生成中...' : '发送' }}
-            </button>
+            <div class="workspace-action-group">
+              <button
+                class="ghost workspace-submit-homework"
+                type="button"
+                :disabled="!canSubmitHomework"
+                @click="submitHomework"
+              >
+                {{ submittingHomework ? '提交中...' : '提交最终作业' }}
+              </button>
+              <button class="primary workspace-send" type="button" :disabled="loading || !selectedModel" @click="submitPrompt">
+                {{ loading ? '生成中...' : '发送' }}
+              </button>
+            </div>
           </div>
         </section>
       </section>

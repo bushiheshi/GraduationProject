@@ -9,6 +9,7 @@ from app.bootstrap import init_app_database, ping_database
 from app.config import get_settings
 from app.routes.auth import router as auth_router
 from app.routes.chat import router as chat_router
+from app.routes.detect import router as detect_router
 
 settings = get_settings()
 BASE_DIR = Path(__file__).resolve().parent
@@ -28,6 +29,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
 app.include_router(auth_router)
 app.include_router(chat_router)
+app.include_router(detect_router)
 app.mount('/static', StaticFiles(directory=STATIC_DIR), name='static')
 app.mount('/frontend', StaticFiles(directory=FRONTEND_DIR), name='frontend')
 

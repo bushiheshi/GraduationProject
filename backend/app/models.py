@@ -58,3 +58,19 @@ class ChatRecord(Base):
     content: Mapped[str] = mapped_column(Text, nullable=False)
     citations: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class HomeworkSubmission(Base):
+    __tablename__ = 'homework_submissions'
+
+    id: Mapped[int] = mapped_column(BIGINT, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('users.id'), nullable=False, index=True)
+    conversation_id: Mapped[int] = mapped_column(BIGINT, ForeignKey('chat_conversations.id'), nullable=False, index=True)
+    conversation_title: Mapped[str] = mapped_column(String(120), nullable=False)
+    model_name: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    citations: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    source_generated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False, index=True)
+    submitted_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
