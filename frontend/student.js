@@ -1,4 +1,4 @@
-﻿const { createApp, nextTick } = Vue;
+const { createApp, nextTick } = Vue;
 
 if (window.marked) {
   window.marked.setOptions({
@@ -101,6 +101,18 @@ function flashCopyButton(button, text) {
   button.dataset.resetTimer = String(timer);
 }
 
+function createAnswerEditor(submission = null) {
+  return {
+    open: false,
+    text: submission?.answer_text || '',
+    file: null,
+    fileName: '',
+    submitting: false,
+    message: '',
+    messageType: '',
+  };
+}
+
 createApp({
   data() {
     return {
@@ -111,6 +123,8 @@ createApp({
       conversations: [],
       activeConversationId: null,
       records: [],
+      conversationSubmission: null,
+      answerEditor: createAnswerEditor(),
       prompt: '',
       loading: false,
       creatingConversation: false,
@@ -178,6 +192,11 @@ createApp({
       }
     },
 
+    resetAnswerEditor(submission = null) {
+      this.conversationSubmission = submission;
+      this.answerEditor = createAnswerEditor(submission);
+    },
+
     async loadConversations(options = {}) {
       const focusConversationId = options.focusConversationId ?? this.activeConversationId;
       const conversations = await this.request('/api/chat/conversations');
@@ -189,18 +208,25 @@ createApp({
 
       this.activeConversationId = nextConversationId;
       if (nextConversationId) {
-        await this.loadConversationRecords(nextConversationId);
+        await this.loadConversationData(nextConversationId);
       } else {
         this.records = [];
+        this.resetAnswerEditor();
       }
     },
 
-    async loadConversationRecords(conversationId) {
-      const records = await this.request(`/api/chat/conversations/${conversationId}/records`);
+    async loadConversationData(conversationId) {
+      const [records, submission] = await Promise.all([
+        this.request(`/api/chat/conversations/${conversationId}/records`),
+        this.request(`/api/chat/conversations/${conversationId}/answer-submission`),
+      ]);
+
       if (this.activeConversationId !== conversationId) {
         return;
       }
+
       this.records = records;
+      this.resetAnswerEditor(submission);
       await nextTick();
       this.scrollThreadToBottom();
     },
@@ -210,7 +236,7 @@ createApp({
         return;
       }
       this.activeConversationId = conversationId;
-      await this.loadConversationRecords(conversationId);
+      await this.loadConversationData(conversationId);
       this.message = '已切换到该对话';
       this.messageType = 'success';
     },
@@ -287,6 +313,107 @@ createApp({
         this.messageType = 'error';
       } finally {
         this.loading = false;
+      }
+    },
+
+    toggleAnswerEditor() {
+      this.answerEditor.open = !this.answerEditor.open;
+      if (!this.answerEditor.open) {
+        this.answerEditor.file = null;
+        this.answerEditor.fileName = '';
+        this.answerEditor.message = '';
+        this.answerEditor.messageType = '';
+        return;
+      }
+
+      if (!this.answerEditor.text && this.conversationSubmission?.answer_text) {
+        this.answerEditor.text = this.conversationSubmission.answer_text;
+      }
+    },
+
+    answerButtonLabel() {
+      if (this.answerEditor.open) {
+        return '收起提交';
+      }
+      return this.conversationSubmission ? '修改答案' : '提交答案';
+    },
+
+    onAnswerFileChange(event) {
+      const file = event.target.files && event.target.files[0];
+
+      if (!file) {
+        this.answerEditor.file = null;
+        this.answerEditor.fileName = '';
+        return;
+      }
+
+      if (!/\.txt$/i.test(file.name)) {
+        this.answerEditor.file = null;
+        this.answerEditor.fileName = '';
+        this.answerEditor.message = '仅支持上传 .txt 文件';
+        this.answerEditor.messageType = 'error';
+        event.target.value = '';
+        return;
+      }
+
+      this.answerEditor.file = file;
+      this.answerEditor.fileName = file.name;
+      this.answerEditor.message = '';
+      this.answerEditor.messageType = '';
+    },
+
+    clearAnswerFile() {
+      this.answerEditor.file = null;
+      this.answerEditor.fileName = '';
+      this.answerEditor.message = '';
+      this.answerEditor.messageType = '';
+    },
+
+    async submitAnswer() {
+      if (!this.activeConversationId) {
+        this.answerEditor.message = '请先进入一个对话';
+        this.answerEditor.messageType = 'error';
+        return;
+      }
+
+      if (!this.answerEditor.text.trim() && !this.answerEditor.file) {
+        this.answerEditor.message = '请粘贴答案内容或上传一个 .txt 文件';
+        this.answerEditor.messageType = 'error';
+        return;
+      }
+
+      this.answerEditor.submitting = true;
+      this.answerEditor.message = '提交中...';
+      this.answerEditor.messageType = '';
+
+      try {
+        const formData = new FormData();
+        if (this.answerEditor.text.trim()) {
+          formData.append('answer_text', this.answerEditor.text);
+        }
+        if (this.answerEditor.file) {
+          formData.append('answer_file', this.answerEditor.file, this.answerEditor.fileName || this.answerEditor.file.name);
+        }
+
+        const submission = await this.request(
+          `/api/chat/conversations/${this.activeConversationId}/answer-submission`,
+          {
+            method: 'POST',
+            body: formData,
+          },
+        );
+
+        this.conversationSubmission = submission;
+        this.answerEditor.text = submission.answer_text || '';
+        this.answerEditor.file = null;
+        this.answerEditor.fileName = '';
+        this.answerEditor.message = '答案已提交';
+        this.answerEditor.messageType = 'success';
+      } catch (error) {
+        this.answerEditor.message = error.message || '提交失败';
+        this.answerEditor.messageType = 'error';
+      } finally {
+        this.answerEditor.submitting = false;
       }
     },
 

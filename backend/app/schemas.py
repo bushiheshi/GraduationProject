@@ -54,12 +54,24 @@ class ChatConversationResponse(BaseModel):
     updated_at: datetime
     last_generated_at: datetime | None = None
     record_count: int
+    assignment_id: int | None = None
+    assignment_description: str | None = None
 
 
 class ChatCompletionRequest(BaseModel):
     model: str = Field(min_length=1, max_length=32)
     prompt: str = Field(min_length=1, max_length=8000)
     conversation_id: int | None = None
+
+
+class AnswerSubmissionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    answer_text: str
+    source_filename: str | None = None
+    created_at: datetime
+    updated_at: datetime
 
 
 class ChatRecordResponse(BaseModel):
@@ -76,3 +88,41 @@ class ChatRecordResponse(BaseModel):
 
 class ChatCompletionResponse(ChatRecordResponse):
     conversation_title: str
+
+
+class AssignmentCreateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+    description: str | None = Field(default=None, max_length=4000)
+
+
+class TeacherAssignmentResponse(BaseModel):
+    id: int
+    title: str
+    description: str | None = None
+    created_at: datetime
+    updated_at: datetime
+    student_count: int
+    submitted_count: int
+
+
+class TeacherAssignmentSubmissionResponse(BaseModel):
+    student_id: int
+    student_account: str
+    student_name: str
+    conversation_id: int
+    has_submission: bool
+    submitted_at: datetime | None = None
+    source_filename: str | None = None
+    answer_preview: str | None = None
+
+
+class TeacherAssignmentSubmissionDetailResponse(BaseModel):
+    student_id: int
+    student_account: str
+    student_name: str
+    conversation_id: int
+    has_submission: bool
+    submitted_at: datetime | None = None
+    source_filename: str | None = None
+    answer_text: str | None = None
+

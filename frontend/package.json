@@ -1,0 +1,16 @@
+{
+  "name": "aigc-classroom-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:teacher": "vite",
+    "build:teacher": "vite build"
+  },
+  "dependencies": {
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.1.4",
+    "vite": "^5.4.11"
+  }
+}

@@ -1498,7 +1498,7 @@ body.student-page .workspace-user-copy span {
 body.student-page .workspace-main {
   flex: 1 1 auto;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   gap: 20px;
   height: 100vh;
   padding: 22px 28px 22px 24px;
@@ -1542,6 +1542,30 @@ body.student-page .workspace-topbar-actions {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+body.student-page .assignment-brief-card {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(75, 107, 255, 0.08);
+  border: 1px solid rgba(75, 107, 255, 0.1);
+}
+
+body.student-page .assignment-brief-label {
+  margin: 0;
+  color: #4b5fc8;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+body.student-page .assignment-brief-body {
+  margin: 8px 0 0;
+  color: #506072;
+  font-size: 14px;
+  line-height: 1.75;
+  white-space: pre-wrap;
 }
 
 body.student-page .workspace-model-field {
@@ -1679,6 +1703,150 @@ body.student-page .message-citations {
   border-top-color: rgba(24, 33, 39, 0.08);
 }
 
+body.student-page .submission-card {
+  margin-left: 0;
+  padding: 14px 16px;
+  border: 1px solid rgba(24, 33, 39, 0.06);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+body.student-page .submission-summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+body.student-page .submission-summary-copy {
+  min-width: 0;
+}
+
+body.student-page .submission-label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #4b5fc8;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+body.student-page .submission-summary-copy p,
+body.student-page .submission-helper,
+body.student-page .submission-note,
+body.student-page .submission-file-name {
+  margin: 8px 0 0;
+  color: #7b8795;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+body.student-page .submission-summary-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+body.student-page .submission-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(13, 140, 84, 0.1);
+  color: var(--ok);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+body.student-page .submission-toggle,
+body.student-page .submission-clear {
+  padding: 8px 12px;
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+body.student-page .submission-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(24, 33, 39, 0.08);
+}
+
+body.student-page .submission-field {
+  display: grid;
+  gap: 8px;
+}
+
+body.student-page .submission-field span {
+  font-size: 13px;
+  color: #6c7786;
+}
+
+body.student-page .submission-textarea {
+  min-height: 180px;
+  border-radius: 14px;
+  resize: vertical;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  background: #fbfcff;
+}
+
+body.student-page .submission-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+body.student-page .submission-upload {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px dashed rgba(75, 107, 255, 0.28);
+  border-radius: 12px;
+  background: rgba(238, 242, 255, 0.65);
+  color: #394b68;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+body.student-page .submission-upload input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+body.student-page .submission-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+body.student-page .submission-actions .message {
+  margin: 0;
+  flex: 1;
+}
+
+body.student-page .submission-submit {
+  min-width: 116px;
+  margin-top: 0;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #4b6bff, #6d8cff);
+  box-shadow: 0 12px 22px rgba(75, 107, 255, 0.2);
+}
+
 body.student-page .workspace-composer-shell {
   display: grid;
   gap: 12px;
@@ -1783,6 +1951,16 @@ body.student-page .workspace-send {
 
   body.student-page .user-bubble {
     max-width: 100%;
+  }
+
+  body.student-page .submission-card {
+    margin-left: 0;
+  }
+
+  body.student-page .submission-summary,
+  body.student-page .submission-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   body.student-page .composer-actions {

@@ -79,6 +79,14 @@
           </div>
         </header>
 
+        <section
+          v-if="activeConversation && activeConversation.assignment_description"
+          class="assignment-brief-card"
+        >
+          <p class="assignment-brief-label">作业说明</p>
+          <p class="assignment-brief-body">{{ activeConversation.assignment_description }}</p>
+        </section>
+
         <section class="workspace-thread-shell">
           <div class="thread-scroll workspace-thread-scroll" ref="threadScroll" @click="handleMarkdownClick">
             <div v-if="!activeConversationId" class="thread-empty workspace-thread-empty">
@@ -121,6 +129,82 @@
                   </div>
                 </div>
               </article>
+            </div>
+          </div>
+        </section>
+
+        <section v-if="activeConversationId" class="submission-card conversation-submission-card">
+          <div class="submission-summary">
+            <div class="submission-summary-copy">
+              <span class="submission-label">本对话答案提交</span>
+              <p v-if="conversationSubmission">
+                最近提交：{{ formatTime(conversationSubmission.updated_at) }}
+                <template v-if="conversationSubmission.source_filename">
+                  · 文件：{{ conversationSubmission.source_filename }}
+                </template>
+              </p>
+              <p v-else>当前对话有且仅有一个答案提交入口，可粘贴代码或上传 `.txt` 文件。</p>
+            </div>
+
+            <div class="submission-summary-actions">
+              <span v-if="conversationSubmission" class="submission-badge">已提交</span>
+              <button class="ghost submission-toggle" type="button" @click="toggleAnswerEditor">
+                {{ answerButtonLabel() }}
+              </button>
+            </div>
+          </div>
+
+          <div v-if="answerEditor.open" class="submission-panel">
+            <p v-if="conversationSubmission" class="submission-helper">
+              上次提交时间：{{ formatTime(conversationSubmission.updated_at) }}
+              <template v-if="conversationSubmission.source_filename">
+                · 原文件：{{ conversationSubmission.source_filename }}
+              </template>
+            </p>
+
+            <label class="submission-field">
+              <span>粘贴代码 / 文本答案</span>
+              <textarea
+                v-model="answerEditor.text"
+                class="submission-textarea"
+                rows="8"
+                maxlength="100000"
+                placeholder="可以直接粘贴代码或文本答案。"
+              ></textarea>
+            </label>
+
+            <div class="submission-upload-row">
+              <label class="submission-upload">
+                <input type="file" accept=".txt,text/plain" @change="onAnswerFileChange($event)" />
+                <span>{{ answerEditor.fileName ? '重新选择 .txt 文件' : '上传 .txt 文件' }}</span>
+              </label>
+
+              <button
+                v-if="answerEditor.fileName"
+                class="ghost submission-clear"
+                type="button"
+                @click="clearAnswerFile"
+              >
+                移除文件
+              </button>
+            </div>
+
+            <p v-if="answerEditor.fileName" class="submission-file-name">
+              待上传文件：{{ answerEditor.fileName }}
+            </p>
+
+            <p class="submission-note">可只填文本、只传文件，也可同时提交；同时提交时会按“文本 + 文件内容”合并保存。</p>
+
+            <div class="submission-actions">
+              <p :class="['message', answerEditor.messageType]">{{ answerEditor.message }}</p>
+              <button
+                class="primary submission-submit"
+                type="button"
+                :disabled="answerEditor.submitting"
+                @click="submitAnswer"
+              >
+                {{ answerEditor.submitting ? '提交中...' : (conversationSubmission ? '更新答案' : '提交答案') }}
+              </button>
             </div>
           </div>
         </section>

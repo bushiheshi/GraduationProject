@@ -1,15 +1,19 @@
-﻿from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.crud import (
     create_chat_conversation,
+    get_answer_submission_by_conversation_id,
     get_chat_conversation_by_id,
     list_chat_conversations_by_user,
     list_chat_records_by_conversation,
     list_chat_records_by_user,
     list_recent_chat_records_for_context,
     save_chat_completion,
+    upsert_answer_submission,
 )
 from app.dependencies import get_current_user, get_db
 from app.llm_service import (
@@ -20,6 +24,7 @@ from app.llm_service import (
 )
 from app.models import ChatRecord, UserRole
 from app.schemas import (
+    AnswerSubmissionResponse,
     ChatCompletionRequest,
     ChatCompletionResponse,
     ChatConversationCreateRequest,
@@ -30,6 +35,8 @@ from app.schemas import (
 
 router = APIRouter(prefix='/api/chat', tags=['chat'])
 settings = get_settings()
+MAX_ANSWER_TEXT_LENGTH = 100_000
+MAX_ANSWER_FILE_SIZE = 200_000
 
 
 @router.get('/models', response_model=list[ChatModelInfo])
@@ -72,6 +79,8 @@ def create_conversation(
         updated_at=conversation.updated_at,
         last_generated_at=None,
         record_count=0,
+        assignment_id=conversation.assignment_id,
+        assignment_description=None,
     )
 
 
@@ -81,14 +90,77 @@ def get_conversation_records(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    if current_user.role != UserRole.STUDENT:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Only students can use chat models')
+    conversation = _require_student_conversation(
+        db,
+        current_user=current_user,
+        conversation_id=conversation_id,
+    )
+    return list_chat_records_by_conversation(db, conversation_id=conversation.id, user_id=current_user.id)
 
-    conversation = get_chat_conversation_by_id(db, conversation_id=conversation_id, user_id=current_user.id)
-    if not conversation:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Conversation not found')
 
-    return list_chat_records_by_conversation(db, conversation_id=conversation_id, user_id=current_user.id)
+@router.get(
+    '/conversations/{conversation_id}/answer-submission',
+    response_model=AnswerSubmissionResponse | None,
+)
+def get_conversation_answer_submission(
+    conversation_id: int,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    conversation = _require_student_conversation(
+        db,
+        current_user=current_user,
+        conversation_id=conversation_id,
+    )
+    submission = get_answer_submission_by_conversation_id(
+        db,
+        user_id=current_user.id,
+        conversation_id=conversation.id,
+    )
+    return AnswerSubmissionResponse.model_validate(submission) if submission is not None else None
+
+
+@router.post('/conversations/{conversation_id}/answer-submission', response_model=AnswerSubmissionResponse)
+async def submit_answer(
+    conversation_id: int,
+    answer_text: str | None = Form(default=None),
+    answer_file: UploadFile | None = File(default=None),
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    conversation = _require_student_conversation(
+        db,
+        current_user=current_user,
+        conversation_id=conversation_id,
+    )
+
+    normalized_text = (answer_text or '').strip()
+    uploaded_text, source_filename = await _read_answer_file(answer_file)
+
+    if normalized_text and uploaded_text:
+        normalized_text = f'{normalized_text}\n\n{uploaded_text}'
+    elif uploaded_text:
+        normalized_text = uploaded_text
+
+    if not normalized_text:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Please provide answer text or upload a .txt file',
+        )
+    if len(normalized_text) > MAX_ANSWER_TEXT_LENGTH:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Answer content must be at most {MAX_ANSWER_TEXT_LENGTH} characters',
+        )
+
+    submission = upsert_answer_submission(
+        db,
+        user_id=current_user.id,
+        conversation_id=conversation.id,
+        answer_text=normalized_text,
+        source_filename=source_filename,
+    )
+    return AnswerSubmissionResponse.model_validate(submission)
 
 
 @router.post('/completions', response_model=ChatCompletionResponse)
@@ -158,6 +230,16 @@ def get_history(
     return list_chat_records_by_user(db, user_id=current_user.id, limit=limit)
 
 
+def _require_student_conversation(db: Session, *, current_user, conversation_id: int):
+    if current_user.role != UserRole.STUDENT:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Only students can use chat models')
+
+    conversation = get_chat_conversation_by_id(db, conversation_id=conversation_id, user_id=current_user.id)
+    if not conversation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Conversation not found')
+    return conversation
+
+
 def _resolve_conversation(db: Session, *, user_id: int, conversation_id: int | None):
     if conversation_id is None:
         return create_chat_conversation(db, user_id=user_id)
@@ -178,13 +260,46 @@ def _build_history_messages(records: list[ChatRecord]) -> list[dict[str, str]]:
     return messages
 
 
+async def _read_answer_file(answer_file: UploadFile | None) -> tuple[str, str | None]:
+    if answer_file is None:
+        return '', None
+
+    source_filename = Path(answer_file.filename or '').name or None
+    if source_filename and Path(source_filename).suffix.lower() != '.txt':
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Only .txt files are supported',
+        )
+
+    data = await answer_file.read()
+    if not data:
+        return '', source_filename
+    if len(data) > MAX_ANSWER_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f'Text file must be at most {MAX_ANSWER_FILE_SIZE} bytes',
+        )
+
+    try:
+        content = data.decode('utf-8-sig')
+    except UnicodeDecodeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail='Text file must be UTF-8 encoded',
+        ) from exc
+
+    return content.strip(), source_filename
+
+
 def _to_conversation_response(item: dict) -> ChatConversationResponse:
     conversation = item['conversation']
+    assignment = item.get('assignment')
     return ChatConversationResponse(
         id=conversation.id,
         title=conversation.title,
         updated_at=conversation.updated_at,
         last_generated_at=item.get('last_generated_at'),
         record_count=int(item.get('record_count') or 0),
+        assignment_id=conversation.assignment_id,
+        assignment_description=assignment.description if assignment else None,
     )
-

@@ -1,4 +1,4 @@
-﻿const { createApp } = Vue;
+const { createApp } = Vue;
 
 const RoleSwitch = {
   props: {
@@ -22,7 +22,7 @@ const RoleSwitch = {
         :class="['tab', role === 'teacher' ? 'active' : '']"
         @click="$emit('update:role', 'teacher')"
       >
-        老师
+        教师
       </button>
     </div>
   `,
@@ -39,10 +39,10 @@ const SessionCard = {
       required: true,
     },
   },
-  emits: ['enter-student', 'logout'],
+  emits: ['enter-workspace', 'logout'],
   computed: {
-    isStudent() {
-      return this.user.role === 'student';
+    actionLabel() {
+      return this.user.role === 'teacher' ? '进入教师页' : '进入学生页';
     },
   },
   template: `
@@ -53,7 +53,7 @@ const SessionCard = {
       <p>角色：{{ user.role }}</p>
       <p>创建时间：{{ formatTime(user.created_at) }}</p>
       <div class="action-row">
-        <button v-if="isStudent" class="primary" type="button" @click="$emit('enter-student')">进入学生页</button>
+        <button class="primary" type="button" @click="$emit('enter-workspace')">{{ actionLabel }}</button>
         <button class="ghost" type="button" @click="$emit('logout')">退出登录</button>
       </div>
     </section>
@@ -89,9 +89,9 @@ createApp({
       this.account = me.account;
       this.password = '123456';
       this.message =
-        me.role === 'student'
-          ? '检测到学生已登录，当前仍停留在登录页，可点击进入学生页。'
-          : `欢迎回来，${me.name}`;
+        me.role === 'teacher'
+          ? '检测到教师已登录，可直接进入教师页。'
+          : '检测到学生已登录，可直接进入学生页。';
       this.messageType = 'success';
     } catch {
       localStorage.removeItem('access_token');
@@ -112,7 +112,7 @@ createApp({
       this.messageType = '';
       this.sessionUser = null;
 
-      const endpoint = this.role === 'student' ? '/api/auth/login/student' : '/api/auth/login/teacher';
+      const endpoint = this.role === 'teacher' ? '/api/auth/login/teacher' : '/api/auth/login/student';
 
       try {
         const loginRes = await fetch(endpoint, {
@@ -132,15 +132,9 @@ createApp({
         this.role = me.role;
         this.account = me.account;
 
-        if (me.role === 'student') {
-          this.message = '登录成功，正在进入学生页...';
-          this.messageType = 'success';
-          setTimeout(() => this.goStudent(), 180);
-          return;
-        }
-
-        this.message = '老师登录成功';
+        this.message = me.role === 'teacher' ? '登录成功，正在进入教师页...' : '登录成功，正在进入学生页...';
         this.messageType = 'success';
+        window.setTimeout(() => this.goWorkspace(), 180);
       } catch (error) {
         localStorage.removeItem('access_token');
         this.message = error.message || '登录失败';
@@ -175,6 +169,18 @@ createApp({
 
     goStudent() {
       window.location.href = '/frontend/student.html';
+    },
+
+    goTeacher() {
+      window.location.href = '/frontend/teacher/index.html';
+    },
+
+    goWorkspace() {
+      if (this.sessionUser?.role === 'teacher') {
+        this.goTeacher();
+        return;
+      }
+      this.goStudent();
     },
   },
 }).mount('#app');

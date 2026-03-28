@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
@@ -16,7 +16,7 @@
       <section class="card auth-card">
         <p class="eyebrow">AIGC Classroom</p>
         <h1>教学 AI 平台登录</h1>
-        <p class="desc">学生登录后进入对话空间，老师登录后可保留在当前页面查看账户状态。</p>
+        <p class="desc">学生登录后进入对话空间，教师登录后进入作业发布页。</p>
 
         <role-switch :role="role" @update:role="setRole"></role-switch>
 
@@ -36,7 +36,7 @@
           v-if="sessionUser"
           :user="sessionUser"
           :format-time="formatTime"
-          @enter-student="goStudent"
+          @enter-workspace="goWorkspace"
           @logout="logout"
         ></session-card>
       </section>
@@ -45,8 +45,8 @@
         <h2>使用说明</h2>
         <ul class="feature-list">
           <li>访问根路径 `http://127.0.0.1:8000/` 会固定进入登录页。</li>
-          <li>学生账号登录后跳转学生会话页，可选择模型并记录历史。</li>
-          <li>老师账号登录后停留当前页，可直接查看账户信息并退出。</li>
+          <li>学生登录后跳转学生会话页，可在教师下发的作业对话内继续使用 AI 并提交答案。</li>
+          <li>教师登录后跳转教师页，可发布作业并查看学生提交状态。</li>
         </ul>
         <div class="hint-box">
           <p>演示账号建议</p>
