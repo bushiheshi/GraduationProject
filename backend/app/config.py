@@ -1,6 +1,7 @@
-﻿from functools import lru_cache
+from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import URL
 
 
 class Settings(BaseSettings):
@@ -11,11 +12,13 @@ class Settings(BaseSettings):
     app_port: int = 8000
     debug: bool = True
 
-    mysql_host: str = '127.0.0.1'
-    mysql_port: int = 3306
-    mysql_user: str = 'root'
-    mysql_password: str = '123456'
-    mysql_db: str = 'aigc_platform'
+    database_url: str | None = None
+    postgres_host: str = '127.0.0.1'
+    postgres_port: int = 5432
+    postgres_user: str = 'postgres'
+    postgres_password: str = '123456'
+    postgres_db: str = 'aigc_platform'
+    postgres_sslmode: str | None = None
 
     jwt_secret_key: str = 'change_me_to_a_long_random_string'
     jwt_algorithm: str = 'HS256'
@@ -34,14 +37,20 @@ class Settings(BaseSettings):
 
     @property
     def sqlalchemy_database_uri(self) -> str:
-        return (
-            f"mysql+pymysql://{self.mysql_user}:{self.mysql_password}"
-            f"@{self.mysql_host}:{self.mysql_port}/{self.mysql_db}?charset=utf8mb4"
-        )
+        if self.database_url:
+            return self.database_url
+
+        return URL.create(
+            drivername='postgresql+psycopg',
+            username=self.postgres_user,
+            password=self.postgres_password,
+            host=self.postgres_host,
+            port=self.postgres_port,
+            database=self.postgres_db,
+            query={'sslmode': self.postgres_sslmode} if self.postgres_sslmode else None,
+        ).render_as_string(hide_password=False)
 
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-
-

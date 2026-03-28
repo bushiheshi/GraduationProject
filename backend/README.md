@@ -1,4 +1,4 @@
-﻿# Backend (Login + Chat + MySQL + Vue3 Frontend)
+# Backend (Login + Chat + PostgreSQL + Vue3 Frontend)
 
 ## 1. Prepare
 
@@ -8,14 +8,17 @@
 Copy-Item backend/.env.example backend/.env
 ```
 
-2. Edit `backend/.env` and set your MySQL + model API keys:
+2. Edit `backend/.env` and set your PostgreSQL + model API keys:
 
 ```env
-MYSQL_HOST=127.0.0.1
-MYSQL_PORT=3306
-MYSQL_USER=root
-MYSQL_PASSWORD=123456
-MYSQL_DB=aigc_platform
+POSTGRES_HOST=127.0.0.1
+POSTGRES_PORT=5432
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=123456
+POSTGRES_DB=aigc_platform
+POSTGRES_SSLMODE=
+# 可选：也可以直接使用完整连接串
+# DATABASE_URL=postgresql+psycopg://postgres:123456@127.0.0.1:5432/aigc_platform
 
 QWEN_API_KEY=your_qwen_key
 QWEN_BASE_URL=https://dashscope.aliyuncs.com
@@ -77,6 +80,7 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 - 系统会按对话维度保存上下文。
 - 每条对话最多保留最近 `5` 轮问答，超过后会自动移除最早记录，避免 token 消耗过高。
 - 再次点击左侧某条对话继续发送时，会自动带上该对话最近的上下文。
+- 项目默认数据库已切换为 PostgreSQL，初始化脚本会自动创建目标库。
 
 `POST /api/chat/completions` 请求体示例：
 
@@ -100,4 +104,3 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ## 4. Other
 
 - `GET /health`
-

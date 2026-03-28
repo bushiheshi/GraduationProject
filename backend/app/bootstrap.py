@@ -1,4 +1,4 @@
-﻿from sqlalchemy import inspect, text
+from sqlalchemy import inspect, text
 
 from app.database import Base, SessionLocal, engine
 from app.models import ChatConversation, ChatRecord, User, UserRole
@@ -20,6 +20,93 @@ def _compile_column_type(column: dict) -> str:
         return column_type.compile(dialect=engine.dialect).upper()
     except Exception:  # noqa: BLE001
         return str(column_type).upper()
+
+
+def _quote_identifier(identifier: str) -> str:
+    quote_char = '"' if engine.dialect.name == 'postgresql' else '`'
+    return f'{quote_char}{identifier.replace(quote_char, quote_char * 2)}{quote_char}'
+
+
+def _alter_column_type_and_nullability(
+    conn,
+    *,
+    table_name: str,
+    column_name: str,
+    column_type: str,
+    nullable: bool,
+) -> None:
+    table_ident = _quote_identifier(table_name)
+    column_ident = _quote_identifier(column_name)
+
+    if engine.dialect.name == 'postgresql':
+        conn.execute(text(f'ALTER TABLE {table_ident} ALTER COLUMN {column_ident} TYPE {column_type}'))
+        conn.execute(
+            text(
+                f'ALTER TABLE {table_ident} ALTER COLUMN {column_ident} '
+                f'{"DROP" if nullable else "SET"} NOT NULL'
+            )
+        )
+        return
+
+    null_sql = 'NULL' if nullable else 'NOT NULL'
+    conn.execute(
+        text(f'ALTER TABLE {table_ident} MODIFY COLUMN {column_ident} {column_type} {null_sql}')
+    )
+
+
+def _add_column(
+    conn,
+    *,
+    table_name: str,
+    column_name: str,
+    column_type: str,
+    nullable: bool,
+) -> None:
+    table_ident = _quote_identifier(table_name)
+    column_ident = _quote_identifier(column_name)
+    null_sql = 'NULL' if nullable else 'NOT NULL'
+    conn.execute(text(f'ALTER TABLE {table_ident} ADD COLUMN {column_ident} {column_type} {null_sql}'))
+
+
+def _drop_foreign_key(conn, *, table_name: str, constraint_name: str) -> None:
+    table_ident = _quote_identifier(table_name)
+    constraint_ident = _quote_identifier(constraint_name)
+
+    if engine.dialect.name == 'postgresql':
+        conn.execute(text(f'ALTER TABLE {table_ident} DROP CONSTRAINT IF EXISTS {constraint_ident}'))
+        return
+
+    conn.execute(text(f'ALTER TABLE {table_ident} DROP FOREIGN KEY {constraint_ident}'))
+
+
+def _create_index(conn, *, table_name: str, index_name: str, column_names: list[str]) -> None:
+    table_ident = _quote_identifier(table_name)
+    index_ident = _quote_identifier(index_name)
+    columns_sql = ', '.join(_quote_identifier(column_name) for column_name in column_names)
+    conn.execute(text(f'CREATE INDEX {index_ident} ON {table_ident} ({columns_sql})'))
+
+
+def _add_foreign_key(
+    conn,
+    *,
+    table_name: str,
+    constraint_name: str,
+    column_name: str,
+    referred_table: str,
+    referred_column: str = 'id',
+) -> None:
+    table_ident = _quote_identifier(table_name)
+    constraint_ident = _quote_identifier(constraint_name)
+    column_ident = _quote_identifier(column_name)
+    referred_table_ident = _quote_identifier(referred_table)
+    referred_column_ident = _quote_identifier(referred_column)
+    conn.execute(
+        text(
+            f'ALTER TABLE {table_ident} '
+            f'ADD CONSTRAINT {constraint_ident} '
+            f'FOREIGN KEY ({column_ident}) REFERENCES {referred_table_ident}({referred_column_ident})'
+        )
+    )
 
 
 def _find_foreign_key_name(
@@ -64,28 +151,43 @@ def ensure_conversation_schema() -> None:
 
     with engine.begin() as conn:
         if has_user_fk and conversation_user_id_type != target_user_id_type:
-            conn.execute(text(f'ALTER TABLE chat_conversations DROP FOREIGN KEY `{user_fk_name}`'))
+            _drop_foreign_key(
+                conn,
+                table_name='chat_conversations',
+                constraint_name=user_fk_name,
+            )
             has_user_fk = False
 
         if conversation_user_id_type != target_user_id_type or columns['user_id'].get('nullable', True):
-            conn.execute(
-                text(
-                    'ALTER TABLE chat_conversations '
-                    f'MODIFY COLUMN user_id {target_user_id_type} NOT NULL'
-                )
+            _alter_column_type_and_nullability(
+                conn,
+                table_name='chat_conversations',
+                column_name='user_id',
+                column_type=target_user_id_type,
+                nullable=False,
             )
 
         if not has_user_index:
-            conn.execute(text('CREATE INDEX idx_chat_conversations_user_id ON chat_conversations (user_id)'))
+            _create_index(
+                conn,
+                table_name='chat_conversations',
+                index_name='idx_chat_conversations_user_id',
+                column_names=['user_id'],
+            )
         if not has_updated_at_index:
-            conn.execute(text('CREATE INDEX idx_chat_conversations_updated_at ON chat_conversations (updated_at)'))
+            _create_index(
+                conn,
+                table_name='chat_conversations',
+                index_name='idx_chat_conversations_updated_at',
+                column_names=['updated_at'],
+            )
         if not has_user_fk:
-            conn.execute(
-                text(
-                    'ALTER TABLE chat_conversations '
-                    'ADD CONSTRAINT fk_chat_conversations_user_id '
-                    'FOREIGN KEY (user_id) REFERENCES users(id)'
-                )
+            _add_foreign_key(
+                conn,
+                table_name='chat_conversations',
+                constraint_name='fk_chat_conversations_user_id',
+                column_name='user_id',
+                referred_table='users',
             )
 
 
@@ -121,11 +223,12 @@ def ensure_chat_schema() -> None:
 
     with engine.begin() as conn:
         if 'conversation_id' not in columns:
-            conn.execute(
-                text(
-                    'ALTER TABLE chat_records '
-                    f'ADD COLUMN conversation_id {target_conversation_id_type} NULL'
-                )
+            _add_column(
+                conn,
+                table_name='chat_records',
+                column_name='conversation_id',
+                column_type=target_conversation_id_type,
+                nullable=True,
             )
             columns['conversation_id'] = {'type': target_conversation_id_type, 'nullable': True}
 
@@ -136,47 +239,62 @@ def ensure_chat_schema() -> None:
         )
 
         if has_user_fk and record_user_id_type != target_user_id_type:
-            conn.execute(text(f'ALTER TABLE chat_records DROP FOREIGN KEY `{user_fk_name}`'))
+            _drop_foreign_key(
+                conn,
+                table_name='chat_records',
+                constraint_name=user_fk_name,
+            )
             has_user_fk = False
         if has_conversation_fk and record_conversation_id_type != target_conversation_id_type:
-            conn.execute(text(f'ALTER TABLE chat_records DROP FOREIGN KEY `{conversation_fk_name}`'))
+            _drop_foreign_key(
+                conn,
+                table_name='chat_records',
+                constraint_name=conversation_fk_name,
+            )
             has_conversation_fk = False
 
         if record_user_id_type != target_user_id_type or columns['user_id'].get('nullable', True):
-            conn.execute(
-                text(
-                    'ALTER TABLE chat_records '
-                    f'MODIFY COLUMN user_id {target_user_id_type} NOT NULL'
-                )
+            _alter_column_type_and_nullability(
+                conn,
+                table_name='chat_records',
+                column_name='user_id',
+                column_type=target_user_id_type,
+                nullable=False,
             )
         if (
             record_conversation_id_type != target_conversation_id_type
             or not columns['conversation_id'].get('nullable', True)
         ):
-            conn.execute(
-                text(
-                    'ALTER TABLE chat_records '
-                    f'MODIFY COLUMN conversation_id {target_conversation_id_type} NULL'
-                )
+            _alter_column_type_and_nullability(
+                conn,
+                table_name='chat_records',
+                column_name='conversation_id',
+                column_type=target_conversation_id_type,
+                nullable=True,
             )
 
         if not has_conversation_index:
-            conn.execute(text('CREATE INDEX idx_chat_conversation_id ON chat_records (conversation_id)'))
+            _create_index(
+                conn,
+                table_name='chat_records',
+                index_name='idx_chat_conversation_id',
+                column_names=['conversation_id'],
+            )
         if not has_user_fk:
-            conn.execute(
-                text(
-                    'ALTER TABLE chat_records '
-                    'ADD CONSTRAINT fk_chat_records_user_id '
-                    'FOREIGN KEY (user_id) REFERENCES users(id)'
-                )
+            _add_foreign_key(
+                conn,
+                table_name='chat_records',
+                constraint_name='fk_chat_records_user_id',
+                column_name='user_id',
+                referred_table='users',
             )
         if not has_conversation_fk:
-            conn.execute(
-                text(
-                    'ALTER TABLE chat_records '
-                    'ADD CONSTRAINT fk_chat_records_conversation_id '
-                    'FOREIGN KEY (conversation_id) REFERENCES chat_conversations(id)'
-                )
+            _add_foreign_key(
+                conn,
+                table_name='chat_records',
+                constraint_name='fk_chat_records_conversation_id',
+                column_name='conversation_id',
+                referred_table='chat_conversations',
             )
 
 

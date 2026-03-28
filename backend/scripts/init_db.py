@@ -1,7 +1,7 @@
-﻿"""项目数据库初始化脚本。
+"""项目数据库初始化脚本。
 
 用途：
-1) 不依赖本机 mysql 客户端，直接用 Python 连接远程/本地 MySQL。
+1) 不依赖本机 psql 客户端，直接用 Python 连接远程/本地 PostgreSQL。
 2) 自动创建数据库（如果不存在）。
 3) 按当前 SQLAlchemy 模型创建缺失的表。
 4) 可选写入演示账号。
@@ -22,34 +22,43 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-import pymysql
+import psycopg
+from psycopg import sql
 
 from app.bootstrap import init_app_database
 from app.config import get_settings
 
 
 def ensure_database_exists() -> None:
-    """先连接 MySQL 实例本身，再创建目标数据库。"""
+    """先连接 PostgreSQL 默认库，再创建目标数据库。"""
     settings = get_settings()
 
-    # 这里不指定 db，避免“数据库不存在”时无法连接。
-    conn = pymysql.connect(
-        host=settings.mysql_host,
-        port=settings.mysql_port,
-        user=settings.mysql_user,
-        password=settings.mysql_password,
-        charset='utf8mb4',
-        autocommit=True,
+    # 先连接默认库，避免目标库不存在时无法建立连接。
+    connect_kwargs = {
+        'host': settings.postgres_host,
+        'port': settings.postgres_port,
+        'user': settings.postgres_user,
+        'password': settings.postgres_password,
+        'dbname': 'postgres',
+        'autocommit': True,
+    }
+    if settings.postgres_sslmode:
+        connect_kwargs['sslmode'] = settings.postgres_sslmode
+
+    conn = psycopg.connect(
+        **connect_kwargs,
     )
 
     try:
         with conn.cursor() as cur:
-            # 使用 IF NOT EXISTS 保证脚本可重复执行。
             cur.execute(
-                f"CREATE DATABASE IF NOT EXISTS `{settings.mysql_db}` "
-                "DEFAULT CHARACTER SET utf8mb4 "
-                "DEFAULT COLLATE utf8mb4_unicode_ci"
+                'SELECT 1 FROM pg_database WHERE datname = %s',
+                (settings.postgres_db,),
             )
+            if cur.fetchone() is None:
+                cur.execute(
+                    sql.SQL('CREATE DATABASE {}').format(sql.Identifier(settings.postgres_db))
+                )
     finally:
         conn.close()
 
