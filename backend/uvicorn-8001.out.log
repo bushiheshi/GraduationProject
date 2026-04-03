@@ -1,0 +1,21 @@
+INFO:     127.0.0.1:49394 - "POST /api/auth/login/teacher HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49394 - "GET /api/teacher/assignments/1/submissions/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49395 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58348 - "GET /frontend/teacher/index.html HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58348 - "GET /frontend/teacher/assets/index-NrRBZxcE.js HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51579 - "GET /frontend/teacher/assets/index-HSq1ZgWT.css HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51579 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51579 - "GET /api/teacher/assignments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51579 - "GET /api/teacher/assignments/1/submissions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51579 - "GET /api/teacher/assignments/1/submissions/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55289 - "GET /frontend/teacher/index.html HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:55289 - "GET /frontend/teacher/assets/index-NrRBZxcE.js HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:62446 - "GET /frontend/teacher/assets/index-HSq1ZgWT.css HTTP/1.1" 304 Not Modified
+INFO:     127.0.0.1:62446 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62446 - "GET /api/teacher/assignments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62446 - "GET /api/teacher/assignments/1/submissions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62446 - "GET /api/teacher/assignments/1/submissions/1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63089 - "GET /api/auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63089 - "GET /api/teacher/assignments HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63089 - "GET /api/teacher/assignments/1/submissions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63089 - "GET /api/teacher/assignments/1/submissions/1 HTTP/1.1" 200 OK

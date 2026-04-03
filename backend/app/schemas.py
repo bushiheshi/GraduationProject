@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -105,6 +105,39 @@ class TeacherAssignmentResponse(BaseModel):
     submitted_count: int
 
 
+class TeacherAiUsageModelStatResponse(BaseModel):
+    model_name: str
+    count: int
+
+
+class TeacherAiUsageStageStatResponse(BaseModel):
+    key: str
+    label: str
+    count: int
+
+
+class TeacherAiUsageTimelineItemResponse(BaseModel):
+    record_id: int
+    generated_at: datetime
+    model_name: str
+    stage_label: str
+    prompt_preview: str
+
+
+class TeacherAiUsageSummaryResponse(BaseModel):
+    total_count: int = 0
+    first_used_at: datetime | None = None
+    last_used_at: datetime | None = None
+    pre_submission_count: int = 0
+    post_submission_count: int = 0
+    models_used: list[str] = Field(default_factory=list)
+    model_stats: list[TeacherAiUsageModelStatResponse] = Field(default_factory=list)
+    stage_stats: list[TeacherAiUsageStageStatResponse] = Field(default_factory=list)
+    behavior_tags: list[str] = Field(default_factory=list)
+    learning_summary: str = '未检测到该作业的 AI 使用记录。'
+    timeline: list[TeacherAiUsageTimelineItemResponse] = Field(default_factory=list)
+
+
 class TeacherAssignmentSubmissionResponse(BaseModel):
     student_id: int
     student_account: str
@@ -114,6 +147,10 @@ class TeacherAssignmentSubmissionResponse(BaseModel):
     submitted_at: datetime | None = None
     source_filename: str | None = None
     answer_preview: str | None = None
+    ai_usage_count: int = 0
+    ai_models_used: list[str] = Field(default_factory=list)
+    ai_last_used_at: datetime | None = None
+    ai_learning_summary: str | None = None
 
 
 class TeacherAssignmentSubmissionDetailResponse(BaseModel):
@@ -125,4 +162,4 @@ class TeacherAssignmentSubmissionDetailResponse(BaseModel):
     submitted_at: datetime | None = None
     source_filename: str | None = None
     answer_text: str | None = None
-
+    ai_usage: TeacherAiUsageSummaryResponse = Field(default_factory=TeacherAiUsageSummaryResponse)

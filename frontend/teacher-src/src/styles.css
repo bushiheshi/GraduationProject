@@ -878,3 +878,196 @@ h2,
     padding: 12px;
   }
 }
+
+
+.submission-ai-brief {
+  margin: -2px 0 0;
+  color: var(--teacher-soft);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.submission-ai-brief.is-empty {
+  color: var(--teacher-soft-2);
+}
+
+.usage-panel {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(243, 250, 248, 0.94), rgba(255, 255, 255, 0.94));
+  border: 1px solid rgba(16, 120, 107, 0.14);
+}
+
+.usage-block {
+  display: grid;
+  gap: 16px;
+}
+
+.usage-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.usage-stat-card,
+.usage-summary-panel,
+.usage-stage-card,
+.usage-timeline-item,
+.usage-empty {
+  border: 1px solid rgba(26, 37, 48, 0.07);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.usage-stat-card {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+}
+
+.usage-stat-card span,
+.usage-stat-card small,
+.usage-summary-text,
+.usage-timeline-item p,
+.usage-empty p {
+  color: var(--teacher-soft);
+}
+
+.usage-stat-card span,
+.usage-stat-card small,
+.usage-summary-panel span,
+.usage-stage-card span,
+.usage-empty p {
+  font-size: 12px;
+}
+
+.usage-stat-card strong,
+.usage-stage-card strong,
+.usage-empty strong {
+  font-size: 20px;
+  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+}
+
+.usage-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.usage-tag,
+.usage-stage-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.usage-tag {
+  background: rgba(16, 120, 107, 0.1);
+  color: var(--teacher-mint);
+}
+
+.usage-summary-panel {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+}
+
+.usage-summary-text {
+  margin: 0;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.usage-stage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+}
+
+.usage-stage-card {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.usage-timeline {
+  display: grid;
+  gap: 12px;
+}
+
+.usage-timeline-list {
+  display: grid;
+  gap: 12px;
+}
+
+.usage-timeline-item {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+}
+
+.usage-timeline-head,
+.usage-timeline-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.usage-timeline-head strong {
+  font-size: 15px;
+}
+
+.usage-timeline-meta {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.usage-stage-chip {
+  background: rgba(178, 83, 31, 0.1);
+  color: var(--teacher-accent-deep);
+}
+
+.usage-model-chip {
+  background: rgba(16, 120, 107, 0.12);
+  color: var(--teacher-mint);
+}
+
+.usage-timeline-item p,
+.usage-empty p {
+  margin: 0;
+  line-height: 1.8;
+}
+
+.usage-empty {
+  display: grid;
+  gap: 8px;
+  padding: 16px 18px;
+}
+
+@media (max-width: 960px) {
+  .usage-stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .usage-timeline-head,
+  .usage-timeline-meta {
+    align-items: flex-start;
+  }
+
+  .usage-timeline-head {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .usage-timeline-meta {
+    justify-content: flex-start;
+  }
+}

@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { computed, onMounted, ref } from 'vue';
 
 const token = ref(localStorage.getItem('access_token') || '');
@@ -29,13 +29,13 @@ const selectedSubmissionSummary = computed(() => {
   return submissions.value.find((item) => item.student_id === selectedStudentId.value) || null;
 });
 
+const selectedAiUsage = computed(() => {
+  return selectedSubmissionDetail.value?.ai_usage || null;
+});
+
 const totalAssignments = computed(() => assignments.value.length);
-const totalDistributedCount = computed(() => {
-  return assignments.value.reduce((sum, item) => sum + item.student_count, 0);
-});
-const totalSubmissions = computed(() => {
-  return assignments.value.reduce((sum, item) => sum + item.submitted_count, 0);
-});
+const totalDistributedCount = computed(() => assignments.value.reduce((sum, item) => sum + item.student_count, 0));
+const totalSubmissions = computed(() => assignments.value.reduce((sum, item) => sum + item.submitted_count, 0));
 const selectedStudentCount = computed(() => selectedAssignment.value?.student_count || 0);
 const selectedSubmittedCount = computed(() => selectedAssignment.value?.submitted_count || 0);
 const selectedPendingCount = computed(() => {
@@ -50,12 +50,8 @@ const selectedCompletionRate = computed(() => {
   }
   return Math.round((selectedAssignment.value.submitted_count / selectedAssignment.value.student_count) * 100);
 });
-const selectedWithFileCount = computed(() => {
-  return submissions.value.filter((item) => item.source_filename).length;
-});
-const selectedAnsweredCount = computed(() => {
-  return submissions.value.filter((item) => item.has_submission).length;
-});
+const selectedWithFileCount = computed(() => submissions.value.filter((item) => item.source_filename).length);
+const selectedAnsweredCount = computed(() => submissions.value.filter((item) => item.has_submission).length);
 
 onMounted(async () => {
   if (!token.value) {
@@ -66,15 +62,15 @@ onMounted(async () => {
   try {
     const me = await request('/api/auth/me');
     if (me.role !== 'teacher') {
-      throw new Error('当前账号不是教师账号');
+      throw new Error('当前账号不是教师账号。');
     }
 
     user.value = me;
     await loadAssignments();
-    setMessage('教师工作台已切换为统计与作业查看模式。', 'success');
+    setMessage('教师工作台已支持查看每位学生的 AI 使用分析。', 'success');
   } catch (error) {
     localStorage.removeItem('access_token');
-    setMessage(error.message || '登录状态已失效', 'error');
+    setMessage(error.message || '登录状态已失效。', 'error');
     window.setTimeout(goLogin, 600);
   }
 });
@@ -95,7 +91,7 @@ async function request(url, options = {}) {
     if (response.status === 401 || response.status === 403) {
       localStorage.removeItem('access_token');
     }
-    throw new Error(data.detail || '请求失败');
+    throw new Error(data.detail || '请求失败。');
   }
 
   return data;
@@ -162,7 +158,7 @@ async function loadSubmissions(assignmentId) {
     submissions.value = [];
     selectedStudentId.value = null;
     selectedSubmissionDetail.value = null;
-    setMessage(error.message || '加载提交记录失败', 'error');
+    setMessage(error.message || '加载提交列表失败。', 'error');
   } finally {
     loadingSubmissions.value = false;
   }
@@ -190,11 +186,11 @@ async function loadSubmissionDetail(assignmentId, studentId, options = {}) {
 
     selectedSubmissionDetail.value = detail;
     if (!options.silent) {
-      setMessage(`正在查看 ${detail.student_name} 的提交内容。`, 'success');
+      setMessage(`正在查看 ${detail.student_name} 的提交与 AI 使用情况。`, 'success');
     }
   } catch (error) {
     selectedSubmissionDetail.value = null;
-    setMessage(error.message || '加载学生提交详情失败', 'error');
+    setMessage(error.message || '加载提交详情失败。', 'error');
   } finally {
     loadingSubmissionDetail.value = false;
   }
@@ -243,7 +239,7 @@ async function publishAssignment() {
     await loadSubmissions(created.id);
     setMessage(`作业已发布，已为 ${created.student_count} 名学生创建提交入口。`, 'success');
   } catch (error) {
-    setMessage(error.message || '发布作业失败', 'error');
+    setMessage(error.message || '发布作业失败。', 'error');
   } finally {
     publishing.value = false;
   }
@@ -277,6 +273,10 @@ function downloadSourceFile() {
   window.URL.revokeObjectURL(url);
 }
 
+function summarizeModels(models) {
+  return models?.length ? models.join('、') : '暂无模型记录';
+}
+
 function setMessage(text, type) {
   message.value = text;
   messageType.value = type;
@@ -303,10 +303,10 @@ function goLogin() {
   <div class="teacher-shell">
     <aside class="teacher-sidebar panel">
       <div class="brand-block">
-        <div class="brand-mark">教</div>
+        <div class="brand-mark">T</div>
         <div class="brand-copy">
           <strong>教师作业台</strong>
-          <span>统计与提交查看</span>
+          <span>统计与 AI 使用分析</span>
         </div>
       </div>
 
@@ -315,7 +315,7 @@ function goLogin() {
           <p class="eyebrow">当前教师</p>
           <span class="identity-badge">在线</span>
         </div>
-        <h2>{{ user ? user.name : '正在校验身份' }}</h2>
+        <h2>{{ user ? user.name : '正在校验身份...' }}</h2>
         <p class="identity-account">{{ user ? user.account : '...' }}</p>
       </section>
 
@@ -344,9 +344,9 @@ function goLogin() {
       <section class="panel spotlight-card">
         <div class="spotlight-copy">
           <p class="eyebrow">统计概览</p>
-          <h1>{{ selectedAssignment ? selectedAssignment.title : '先发布一份作业开始统计' }}</h1>
+          <h1>{{ selectedAssignment ? selectedAssignment.title : '请先选择或发布一份作业' }}</h1>
           <p class="spotlight-description">
-            {{ selectedAssignment?.description || '首页主体已调整为统计与查看提交内容。点击学生即可查看答案正文，并在有 txt 文件时预览或下载。' }}
+            {{ selectedAssignment?.description || '教师页现在可以查看每位学生的提交内容、AI 使用次数、模型分布、时间线和学习过程总结。' }}
           </p>
           <div class="toolbar-message-wrap">
             <p :class="['toolbar-message', messageType]">{{ message }}</p>
@@ -375,17 +375,17 @@ function goLogin() {
         <article class="panel summary-card mint-card">
           <span>当前已提交</span>
           <strong>{{ selectedSubmittedCount }}</strong>
-          <small>点击学生查看具体答案</small>
+          <small>点击学生查看详细分析</small>
         </article>
         <article class="panel summary-card sky-card">
-          <span>含 TXT 提交</span>
+          <span>TXT 提交数</span>
           <strong>{{ selectedWithFileCount }}</strong>
           <small>支持预览和下载</small>
         </article>
         <article class="panel summary-card slate-card">
           <span>提交列表条数</span>
           <strong>{{ selectedAnsweredCount }}</strong>
-          <small>当前作业已生成的提交记录</small>
+          <small>当前作业可见的提交记录</small>
         </article>
       </section>
 
@@ -401,7 +401,7 @@ function goLogin() {
 
           <div v-if="!assignments.length" class="empty-state compact-empty">
             <strong>还没有作业</strong>
-            <p>点击“发布作业”后，这里会开始展示统计与学生提交记录。</p>
+            <p>发布作业后，这里将开始展示提交情况和 AI 使用分析。</p>
             <button class="primary-button" type="button" @click="openPublishModal">立即发布</button>
           </div>
 
@@ -430,26 +430,24 @@ function goLogin() {
           <div class="section-head">
             <div>
               <p class="eyebrow">学生提交</p>
-              <h2>{{ selectedAssignment ? '点击学生查看具体作业内容' : '先选择一份作业' }}</h2>
+              <h2>{{ selectedAssignment ? '点击学生查看提交与 AI 使用情况' : '请先选择一份作业' }}</h2>
             </div>
-            <span v-if="selectedAssignment" class="head-tag">
-              {{ selectedSubmittedCount }}/{{ selectedStudentCount }} 已提交
-            </span>
+            <span v-if="selectedAssignment" class="head-tag">{{ selectedSubmittedCount }}/{{ selectedStudentCount }} 已提交</span>
           </div>
 
           <div v-if="!selectedAssignment" class="empty-state">
             <strong>尚未选择作业</strong>
-            <p>左侧选择作业后，这里会显示学生提交列表、答案摘要和文件情况。</p>
+            <p>先在左侧选择作业，这里会显示学生提交列表和 AI 使用简况。</p>
           </div>
 
           <div v-else-if="loadingSubmissions" class="empty-state">
             <strong>正在加载提交列表</strong>
-            <p>系统正在读取当前作业对应的学生提交记录。</p>
+            <p>系统正在读取当前作业的学生提交记录。</p>
           </div>
 
           <div v-else-if="!submissions.length" class="empty-state">
             <strong>暂无学生记录</strong>
-            <p>当前作业暂时没有可展示的学生提交信息。</p>
+            <p>当前作业暂时没有可供展示的学生提交信息。</p>
           </div>
 
           <div v-else class="submission-list">
@@ -471,9 +469,14 @@ function goLogin() {
               <p v-if="item.answer_preview" class="submission-preview">{{ item.answer_preview }}</p>
               <p v-else class="submission-preview is-empty">暂无答案内容</p>
 
+              <p class="submission-ai-brief" :class="{ 'is-empty': !item.ai_usage_count }">
+                {{ item.ai_usage_count ? `AI 使用 ${item.ai_usage_count} 次 · ${summarizeModels(item.ai_models_used)}` : '本次作业对话暂无 AI 使用记录' }}
+              </p>
+
               <div class="submission-meta-row">
                 <small>对话 ID {{ item.conversation_id }}</small>
                 <small v-if="item.submitted_at">提交于 {{ formatTime(item.submitted_at) }}</small>
+                <small v-if="item.ai_last_used_at">最近使用 AI {{ formatTime(item.ai_last_used_at) }}</small>
                 <small v-if="item.source_filename" class="file-chip">{{ item.source_filename }}</small>
               </div>
             </button>
@@ -484,26 +487,24 @@ function goLogin() {
           <div class="section-head">
             <div>
               <p class="eyebrow">提交详情</p>
-              <h2>{{ selectedSubmissionSummary ? selectedSubmissionSummary.student_name : '选择一个学生' }}</h2>
+              <h2>{{ selectedSubmissionSummary ? selectedSubmissionSummary.student_name : '请选择一个学生' }}</h2>
             </div>
-            <span v-if="selectedSubmissionSummary" class="head-tag">
-              {{ selectedSubmissionSummary.has_submission ? '可查看全文' : '暂无提交' }}
-            </span>
+            <span v-if="selectedSubmissionSummary" class="head-tag">{{ selectedSubmissionSummary.has_submission ? '可查看全文' : '暂无提交' }}</span>
           </div>
 
           <div v-if="!selectedAssignment" class="empty-state detail-empty">
-            <strong>这里显示学生作业全文</strong>
-            <p>选择作业并点击某个学生后，可以查看文本答案与 txt 文件信息。</p>
+            <strong>这里展示学生提交全文与 AI 分析</strong>
+            <p>先选择作业，再点击学生，即可查看完整答案、TXT 文件和 AI 使用历史。</p>
           </div>
 
           <div v-else-if="loadingSubmissionDetail" class="empty-state detail-empty">
             <strong>正在加载学生详情</strong>
-            <p>系统正在读取该学生的提交正文和文件信息。</p>
+            <p>系统正在读取提交正文和 AI 使用总结。</p>
           </div>
 
           <div v-else-if="!selectedSubmissionDetail" class="empty-state detail-empty">
             <strong>还没有选中学生</strong>
-            <p>从中间列表点击任意学生即可查看该学生提交的具体内容。</p>
+            <p>点击中间列表中的任意学生，即可查看详细内容。</p>
           </div>
 
           <div v-else class="detail-body">
@@ -518,6 +519,75 @@ function goLogin() {
               </div>
             </div>
 
+            <section class="usage-panel">
+              <div class="answer-head">
+                <span>AI 使用情况</span>
+                <small>{{ selectedAiUsage?.total_count ? `AI 调用总次数：${selectedAiUsage.total_count}` : '本次作业对话暂无 AI 使用记录' }}</small>
+              </div>
+
+              <div v-if="selectedAiUsage?.total_count" class="usage-block">
+                <div class="usage-stat-grid">
+                  <article class="usage-stat-card">
+                    <span>总使用次数</span>
+                    <strong>{{ selectedAiUsage.total_count }}</strong>
+                    <small>提交前 {{ selectedAiUsage.pre_submission_count }} 次 · 提交后 {{ selectedAiUsage.post_submission_count }} 次</small>
+                  </article>
+                  <article class="usage-stat-card">
+                    <span>使用模型</span>
+                    <strong>{{ summarizeModels(selectedAiUsage.models_used) }}</strong>
+                    <small v-if="selectedAiUsage.model_stats.length">{{ selectedAiUsage.model_stats.map((item) => `${item.model_name} ? ${item.count}`).join(' ? ') }}</small>
+                    <small v-else>暂无模型明细</small>
+                  </article>
+                  <article class="usage-stat-card">
+                    <span>首次使用</span>
+                    <strong>{{ formatTime(selectedAiUsage.first_used_at) }}</strong>
+                    <small>最近一次 {{ formatTime(selectedAiUsage.last_used_at) }}</small>
+                  </article>
+                </div>
+
+                <div v-if="selectedAiUsage.behavior_tags.length" class="usage-tags">
+                  <span v-for="tag in selectedAiUsage.behavior_tags" :key="tag" class="usage-tag">{{ tag }}</span>
+                </div>
+
+                <div class="usage-summary-panel">
+                  <span class="file-panel-label">学习过程总结</span>
+                  <p class="usage-summary-text">{{ selectedAiUsage.learning_summary }}</p>
+                </div>
+
+                <div v-if="selectedAiUsage.stage_stats.length" class="usage-stage-grid">
+                  <article v-for="item in selectedAiUsage.stage_stats" :key="item.key" class="usage-stage-card">
+                    <strong>{{ item.count }}</strong>
+                    <span>{{ item.label }}</span>
+                  </article>
+                </div>
+
+                <div class="usage-timeline">
+                  <div class="answer-head">
+                    <span>AI 使用时间线</span>
+                    <small>按生成时间顺序展示本次作业的每次 AI 调用</small>
+                  </div>
+
+                  <div class="usage-timeline-list">
+                    <article v-for="entry in selectedAiUsage.timeline" :key="entry.record_id" class="usage-timeline-item">
+                      <div class="usage-timeline-head">
+                        <strong>{{ formatTime(entry.generated_at) }}</strong>
+                        <div class="usage-timeline-meta">
+                          <span class="usage-stage-chip">{{ entry.stage_label }}</span>
+                          <span class="file-chip usage-model-chip">{{ entry.model_name }}</span>
+                        </div>
+                      </div>
+                      <p>{{ entry.prompt_preview }}</p>
+                    </article>
+                  </div>
+                </div>
+              </div>
+
+              <div v-else class="usage-empty">
+                <strong>暂无 AI 记录</strong>
+                <p>该学生在这次作业对应的对话中还没有产生 AI 记录。</p>
+              </div>
+            </section>
+
             <div v-if="selectedSubmissionDetail.source_filename" class="file-panel">
               <div>
                 <span class="file-panel-label">TXT 文件</span>
@@ -531,15 +601,15 @@ function goLogin() {
 
             <div v-if="selectedSubmissionDetail.has_submission && selectedSubmissionDetail.answer_text" class="answer-panel">
               <div class="answer-head">
-                <span>答案内容</span>
-                <small>支持查看学生提交的文本正文</small>
+                <span>提交答案</span>
+                <small>学生最终提交的全文内容</small>
               </div>
               <pre class="answer-content">{{ selectedSubmissionDetail.answer_text }}</pre>
             </div>
 
             <div v-else class="empty-state detail-empty">
               <strong>该学生尚未提交</strong>
-              <p>当前没有答案正文或 txt 文件可查看。</p>
+              <p>当前还没有答案或 TXT 文件，但上方的 AI 使用记录仍可以查看。</p>
             </div>
           </div>
         </article>
@@ -558,29 +628,17 @@ function goLogin() {
 
         <label class="field">
           <span>作业标题</span>
-          <input
-            v-model="form.title"
-            type="text"
-            maxlength="120"
-            placeholder="例如：数据结构实验一"
-          />
+          <input v-model="form.title" type="text" maxlength="120" placeholder="例如：数据结构实验一" />
         </label>
 
         <label class="field">
           <span>作业说明</span>
-          <textarea
-            v-model="form.description"
-            rows="6"
-            maxlength="4000"
-            placeholder="填写作业要求、评分说明或提交约束。"
-          ></textarea>
+          <textarea v-model="form.description" rows="6" maxlength="4000" placeholder="填写作业要求、评分说明或提交约束。"></textarea>
         </label>
 
         <div class="modal-actions">
           <button class="ghost-button" type="button" @click="closePublishModal">取消</button>
-          <button class="primary-button" type="button" :disabled="publishing" @click="publishAssignment">
-            {{ publishing ? '发布中...' : '确认发布' }}
-          </button>
+          <button class="primary-button" type="button" :disabled="publishing" @click="publishAssignment">{{ publishing ? '发布中...' : '确认发布' }}</button>
         </div>
       </div>
     </div>
@@ -605,4 +663,3 @@ function goLogin() {
     </div>
   </div>
 </template>
-

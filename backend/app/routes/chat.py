@@ -203,7 +203,6 @@ def create_completion(
         prompt=payload.prompt,
         content=result['content'],
         citations=result['citations'],
-        keep_limit=settings.chat_conversation_turn_limit,
     )
 
     return ChatCompletionResponse(
