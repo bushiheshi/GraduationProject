@@ -1,0 +1,145 @@
+{
+  "score": 46.53,
+  "label": "存疑",
+  "metrics": {
+    "support_coverage": 0.1742,
+    "support_density": 0.6941,
+    "scope_alignment": 1.0,
+    "answer_specificity": 1.0,
+    "evidence_consistency": 0.899,
+    "ai_rate": 0.82,
+    "ai_penalty": 0.1476
+  },
+  "method": {
+    "retrieval": "semantic_vector + lexical_overlap",
+    "embedding_model": "BAAI/bge-small-zh-v1.5",
+    "semantic_top_k": 12,
+    "ai_source": "copyleaks_mock"
+  },
+  "progress_bound": {
+    "max_order": 145
+  },
+  "risk_flags": [
+    "教材支撑较弱",
+    "AI生成概率较高"
+  ],
+  "supporting_chunks": [
+    {
+      "chunk_id": "chunk-0074",
+      "order": 74,
+      "chapter": "第二章 算法与程序实现",
+      "section": null,
+      "topic": null,
+      "page_start": 79,
+      "page_end": 79,
+      "semantic_score": 0.8745,
+      "lexical_score": 0.038,
+      "combined_score": 0.7033,
+      "overlap": [
+        "print",
+        "输入"
+      ],
+      "snippet": "t=m%n m=n n=t times=times+1# 循环计数增加 rint(m) print(times) 输入 m:12345 输入 n:54433 输入 m:12345 输入 n:54433 SNN ^\b\u0003Y'[fQúrHy>"
+    },
+    {
+      "chunk_id": "chunk-0052",
+      "order": 52,
+      "chapter": "第二章 算法与程序实现",
+      "section": null,
+      "topic": null,
+      "page_start": 59,
+      "page_end": 59,
+      "semantic_score": 0.8416,
+      "lexical_score": 0.0398,
+      "combined_score": 0.6847,
+      "overlap": [
+        "float",
+        "一个操",
+        "一个操作",
+        "不能",
+        "个操",
+        "个操作",
+        "减法",
+        "加法",
+        "操作",
+        "数字",
+        "程序",
+        "第二",
+        "结果",
+        "运行"
+      ],
+      "snippet": "第二章 算法与程序实现 表 2.6Python 语言的数据类型转换函数 数据类型转换函数 说明 float(3) 将整型数据 3 转换为一个浮点型数据 为 3.0 int(3.6) 将浮点型数据 3.6 转换为一个整型数据 为 3 str(3) 将整型数据 3 转换为字符串型数据 为'3'或\"3\" 中的常量变量与赋值符 常量是直接给定的指在程序运行过程中不变的量 如常用的数学常数就是一个常量 变量指程序运行过程中可以被改变的量 在程序运行过程中 变量被存储在内存中可以通过变量名进行访问 变量命名时 需要遵守命名规则由大小写英文字母 数字或下划线组成 以英..."
+    },
+    {
+      "chunk_id": "chunk-0069",
+      "order": 69,
+      "chapter": "第二章 算法与程序实现",
+      "section": null,
+      "topic": null,
+      "page_start": 75,
+      "page_end": 75,
+      "semantic_score": 0.8175,
+      "lexical_score": 0.0451,
+      "combined_score": 0.6805,
+      "overlap": [
+        "程序",
+        "第二",
+        "请输",
+        "请输入",
+        "输入",
+        "运行"
+      ],
+      "snippet": "第二章 算法与程序实现 请输入身高 ' '' '' '' '' '' '' ' 项 目 实 践 请设计程序 实现同时显示消耗的卡路里数 并填写表 2.20 表 2.20显示多日消耗的卡路里数 的分析与实现 抽象与建模 计算模型 流程图 Python 程序 调试运行 情况记录 SNN ^\b\u0003Y'[fQúrHy>"
+    },
+    {
+      "chunk_id": "chunk-0073",
+      "order": 73,
+      "chapter": "第二章 算法与程序实现",
+      "section": null,
+      "topic": null,
+      "page_start": 79,
+      "page_end": 79,
+      "semantic_score": 0.858,
+      "lexical_score": 0.0319,
+      "combined_score": 0.6773,
+      "overlap": [
+        "if",
+        "input",
+        "print",
+        "个数",
+        "程序",
+        "第二",
+        "结果",
+        "输入",
+        "运行",
+        "选择",
+        "除法"
+      ],
+      "snippet": "第二章 算法与程序实现 在枚举过程中应当尽可能缩小枚举范围 减少枚举次数缩短求解时间提高解决问题的效率 在实际解决问题的过程中 如果需要枚举的范围较小 采用枚举法会比较直观但当枚举范围比较大的时候 则会显得繁琐需要花费大量的时间去逐一尝试 而能用计算机实现枚举法解决问题的关键是依赖于计算机运算快和自动化的特点 通常对于解决同一个问题 可以有多个不同的算法 不同算法的效率也可能不同 例如需要求解给定的两个正整数 和的最大公约数我们可以使用枚举法来求解 即逐一检验从 到和中较小数的范围中 最大的能够同时被 和整除的数 则该数就是 和的最大公约数 此外也可以使..."
+    },
+    {
+      "chunk_id": "chunk-0062",
+      "order": 62,
+      "chapter": "第二章 算法与程序实现",
+      "section": null,
+      "topic": null,
+      "page_start": 69,
+      "page_end": 69,
+      "semantic_score": 0.8514,
+      "lexical_score": 0.0282,
+      "combined_score": 0.6636,
+      "overlap": [
+        "程序",
+        "第二",
+        "结果",
+        "请输",
+        "请输入",
+        "输入"
+      ],
+      "snippet": "第二章 算法与程序实现 图 2.14BMI 指数判定算法流程图 表 2.16BMI 指数标准对照 描述 WHO 标准 需注意 <18.5 正常 18.5~24.9 需注意 >25 设计算法 由于需要将计算得出的 指数与标准范围值进行比较如果比较结果为真 则输出 正常 如果比较结果为假则输出需注意 因此该算法就需要采用分支结构 具体算法描述如下 其流程图如图 所示 输入身高 输入体重 计算 指数保留一位小数 判定 指数是否大于等于 且小于等于 如果为 真则输出正常如果为假则输出需注意 输出 指数 编写程序 根据算法用 程序设计语言编写程序如下 导入 库 请..."
+    }
+  ],
+  "future_reference_chunks": [],
+  "answer_preview": "def main(): print(\"请选择一个操作：\") print(\"1. 加法\") print(\"2. 减法\") print(\"3. 乘法\") print(\"4. 除法\") choice = input(\"请输入你的选择（1/2/3/4）：\") if choice == '1': num1 = float(input(\"请输入第一个数字：\")) num2 = float(input(\"请输入第二个数字：\")) result = num1 + num2 print(f\"结果是：{result}\") elif choice == '2': num1 = float(input(\"请输入第一个...",
+  "question_preview": null
+}

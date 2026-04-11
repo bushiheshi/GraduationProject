@@ -112,21 +112,14 @@ async function loadAssignments() {
   try {
     const data = await request('/api/teacher/assignments');
     assignments.value = data;
-
-    if (!data.length) {
-      selectedAssignmentId.value = null;
-      submissions.value = [];
-      keywordSummary.value = [];
-      selectedStudentId.value = null;
-      selectedSubmissionDetail.value = null;
-      selectedKeywordDetail.value = null;
-      return;
-    }
-
-    const nextAssignmentId = data.some((item) => item.id === selectedAssignmentId.value)
-      ? selectedAssignmentId.value
-      : data[0].id;
-    await selectAssignment(nextAssignmentId);
+    selectedAssignmentId.value = null;
+    submissions.value = [];
+    keywordSummary.value = [];
+    selectedStudentId.value = null;
+    selectedSubmissionDetail.value = null;
+    selectedKeywordDetail.value = null;
+    showKeywordDetailModal.value = false;
+    showFilePreviewModal.value = false;
   } finally {
     loadingAssignments.value = false;
   }
@@ -138,9 +131,12 @@ async function selectAssignment(assignmentId) {
   }
 
   selectedAssignmentId.value = assignmentId;
+  selectedStudentId.value = null;
+  selectedSubmissionDetail.value = null;
   keywordSummary.value = [];
   selectedKeywordDetail.value = null;
   showKeywordDetailModal.value = false;
+  showFilePreviewModal.value = false;
   await Promise.all([
     loadSubmissions(assignmentId),
     loadKeywordSummary(assignmentId),
@@ -156,22 +152,18 @@ async function loadSubmissions(assignmentId) {
   }
 
   loadingSubmissions.value = true;
+  selectedStudentId.value = null;
   selectedSubmissionDetail.value = null;
   try {
     const data = await request(`/api/teacher/assignments/${assignmentId}/submissions`);
-    submissions.value = data;
-
-    if (!data.length) {
-      selectedStudentId.value = null;
-      selectedSubmissionDetail.value = null;
+    if (selectedAssignmentId.value !== assignmentId) {
       return;
     }
 
-    const nextStudentId = data.some((item) => item.student_id === selectedStudentId.value)
-      ? selectedStudentId.value
-      : (data.find((item) => item.has_submission)?.student_id || data[0].student_id);
-
-    await selectSubmission(nextStudentId, { silent: true });
+    submissions.value = data;
+    if (!data.length) {
+      return;
+    }
   } catch (error) {
     submissions.value = [];
     selectedStudentId.value = null;
@@ -276,8 +268,6 @@ async function publishAssignment() {
     form.value.description = '';
     showPublishModal.value = false;
     await loadAssignments();
-    selectedAssignmentId.value = created.id;
-    await loadSubmissions(created.id);
     setMessage(`作业已发布，已为 ${created.student_count} 名学生创建提交入口。`, 'success');
   } catch (error) {
     setMessage(error.message || '发布作业失败。', 'error');

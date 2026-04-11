@@ -159,6 +159,13 @@ def resolve_ai_rate(args: argparse.Namespace, *, answer_text: str) -> tuple[floa
         ai_rate = extract_ai_rate_from_copyleaks(payload)
         return ai_rate, "copyleaks_live", payload
 
+    mock_path = Path(__file__).resolve().parent / "mock_copyleaks_result.json"
+    if mock_path.exists():
+        payload = json.loads(mock_path.read_text(encoding="utf-8"))
+        ai_rate = extract_ai_rate_from_copyleaks(payload)
+        if ai_rate is not None:
+            return ai_rate, "copyleaks_mock", payload
+
     return None, None, None
 
 
@@ -506,6 +513,16 @@ def build_teacher_report(
     question_text: str | None,
     llm_model: str | None,
 ) -> str:
+    metric_labels = {
+        "support_coverage": "教材支撑覆盖度",
+        "support_density": "教材支撑密度",
+        "scope_alignment": "范围对齐度",
+        "answer_specificity": "答案具体度",
+        "evidence_consistency": "证据一致性",
+        "ai_rate": "AI 率",
+        "ai_penalty": "AI 惩罚",
+    }
+
     lines = [
         "# 答案可信度评估报告",
         "",
@@ -527,7 +544,7 @@ def build_teacher_report(
 
     lines.extend(["## 三、量化指标", ""])
     for key, value in result["metrics"].items():
-        lines.append(f"- {key}: `{value}`")
+        lines.append(f"- {metric_labels.get(key, key)}: `{value}`")
 
     lines.extend(["", "## 四、教材支撑证据", ""])
     support_chunks = result.get("supporting_chunks") or []
