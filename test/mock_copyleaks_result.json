@@ -1,0 +1,13 @@
+{
+  "modelVersion": "mock",
+  "summary": {
+    "human": 0.18,
+    "ai": 0.82
+  },
+  "results": [
+    {
+      "classification": 2,
+      "probability": 0.82
+    }
+  ]
+}

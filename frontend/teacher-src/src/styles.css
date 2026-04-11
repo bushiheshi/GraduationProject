@@ -310,6 +310,122 @@ h2,
   gap: 18px;
 }
 
+.keyword-board {
+  padding: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(247, 250, 251, 0.9)),
+    radial-gradient(circle at top right, rgba(16, 120, 107, 0.08), transparent 32%);
+}
+
+.keyword-board-body {
+  display: grid;
+  gap: 18px;
+}
+
+.keyword-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.keyword-overview-card,
+.keyword-detail-stat {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(26, 37, 48, 0.07);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.keyword-overview-card span,
+.keyword-overview-card small,
+.keyword-detail-stat span,
+.keyword-match-section span {
+  color: var(--teacher-soft);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.keyword-overview-card strong,
+.keyword-detail-stat strong,
+.keyword-chip-head strong,
+.keyword-match-head strong {
+  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+}
+
+.keyword-overview-card strong,
+.keyword-detail-stat strong {
+  font-size: 26px;
+}
+
+.keyword-overview-card small {
+  color: var(--teacher-soft-2);
+}
+
+.keyword-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.keyword-chip-card {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px solid rgba(16, 120, 107, 0.12);
+  background: linear-gradient(145deg, rgba(244, 255, 251, 0.96), rgba(255, 255, 255, 0.94));
+  text-align: left;
+  transition: transform 140ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.keyword-chip-card:hover {
+  border-color: rgba(16, 120, 107, 0.24);
+  box-shadow: 0 18px 34px rgba(16, 120, 107, 0.08);
+}
+
+.keyword-chip-head,
+.keyword-match-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.keyword-chip-head strong {
+  font-size: 18px;
+  word-break: break-word;
+}
+
+.keyword-chip-head span {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(178, 83, 31, 0.1);
+  color: var(--teacher-accent-deep);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.keyword-chip-card p,
+.keyword-chip-card small,
+.keyword-match-head span,
+.keyword-match-section p {
+  margin: 0;
+  color: var(--teacher-soft);
+  line-height: 1.8;
+}
+
+.keyword-chip-card small {
+  color: var(--teacher-soft-2);
+}
+
 .summary-card {
   padding: 20px 22px;
   border-radius: 24px;
@@ -775,12 +891,77 @@ h2,
   width: min(920px, 100%);
 }
 
+.keyword-modal {
+  width: min(1100px, 100%);
+}
+
 .modal-head {
   margin-bottom: 22px;
 }
 
 .modal-actions {
   margin-top: 18px;
+}
+
+.keyword-detail-body {
+  display: grid;
+  gap: 18px;
+}
+
+.keyword-detail-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.keyword-match-list {
+  display: grid;
+  gap: 14px;
+  max-height: min(68vh, 760px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.keyword-match-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 24px;
+  border: 1px solid rgba(26, 37, 48, 0.08);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.keyword-match-head strong {
+  display: block;
+  font-size: 18px;
+}
+
+.keyword-match-head span {
+  display: block;
+  font-size: 13px;
+}
+
+.keyword-match-section {
+  display: grid;
+  gap: 8px;
+}
+
+.keyword-match-section.is-compact {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.86);
+}
+
+.keyword-match-content {
+  margin: 0;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(26, 37, 48, 0.07);
+  background: #fbfcfd;
+  color: var(--teacher-text);
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 @media (max-width: 1440px) {
@@ -812,6 +993,8 @@ h2,
 
   .spotlight-card,
   .summary-grid,
+  .keyword-overview-grid,
+  .keyword-detail-stats,
   .workspace-grid {
     grid-template-columns: 1fr;
   }
@@ -825,6 +1008,7 @@ h2,
 
   .teacher-sidebar,
   .spotlight-card,
+  .keyword-board,
   .assignment-card,
   .submission-card,
   .detail-card,
@@ -850,6 +1034,8 @@ h2,
   .section-head,
   .assignment-item-top,
   .submission-header,
+  .keyword-chip-head,
+  .keyword-match-head,
   .detail-meta,
   .file-panel,
   .file-actions,
@@ -876,6 +1062,12 @@ h2,
 
   .modal-overlay {
     padding: 12px;
+  }
+
+  .keyword-chip-grid,
+  .keyword-overview-grid,
+  .keyword-detail-stats {
+    grid-template-columns: 1fr;
   }
 }
 

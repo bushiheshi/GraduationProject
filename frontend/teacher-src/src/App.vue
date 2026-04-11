@@ -6,14 +6,19 @@ const user = ref(null);
 const assignments = ref([]);
 const selectedAssignmentId = ref(null);
 const submissions = ref([]);
+const keywordSummary = ref([]);
 const selectedStudentId = ref(null);
 const selectedSubmissionDetail = ref(null);
+const selectedKeywordDetail = ref(null);
 const loadingAssignments = ref(false);
 const loadingSubmissions = ref(false);
 const loadingSubmissionDetail = ref(false);
+const loadingKeywordSummary = ref(false);
+const loadingKeywordDetail = ref(false);
 const publishing = ref(false);
 const showPublishModal = ref(false);
 const showFilePreviewModal = ref(false);
+const showKeywordDetailModal = ref(false);
 const message = ref('');
 const messageType = ref('');
 const form = ref({
@@ -52,6 +57,11 @@ const selectedCompletionRate = computed(() => {
 });
 const selectedWithFileCount = computed(() => submissions.value.filter((item) => item.source_filename).length);
 const selectedAnsweredCount = computed(() => submissions.value.filter((item) => item.has_submission).length);
+const keywordQuestionCount = computed(() => keywordSummary.value.reduce((sum, item) => sum + item.count, 0));
+const keywordStudentCoverage = computed(() => {
+  const total = keywordSummary.value.reduce((sum, item) => sum + item.student_count, 0);
+  return keywordSummary.value.length ? Math.round(total / keywordSummary.value.length) : 0;
+});
 
 onMounted(async () => {
   if (!token.value) {
@@ -106,8 +116,10 @@ async function loadAssignments() {
     if (!data.length) {
       selectedAssignmentId.value = null;
       submissions.value = [];
+      keywordSummary.value = [];
       selectedStudentId.value = null;
       selectedSubmissionDetail.value = null;
+      selectedKeywordDetail.value = null;
       return;
     }
 
@@ -126,7 +138,13 @@ async function selectAssignment(assignmentId) {
   }
 
   selectedAssignmentId.value = assignmentId;
-  await loadSubmissions(assignmentId);
+  keywordSummary.value = [];
+  selectedKeywordDetail.value = null;
+  showKeywordDetailModal.value = false;
+  await Promise.all([
+    loadSubmissions(assignmentId),
+    loadKeywordSummary(assignmentId),
+  ]);
 }
 
 async function loadSubmissions(assignmentId) {
@@ -161,6 +179,29 @@ async function loadSubmissions(assignmentId) {
     setMessage(error.message || '加载提交列表失败。', 'error');
   } finally {
     loadingSubmissions.value = false;
+  }
+}
+
+async function loadKeywordSummary(assignmentId) {
+  if (!assignmentId) {
+    keywordSummary.value = [];
+    return;
+  }
+
+  loadingKeywordSummary.value = true;
+  try {
+    const data = await request(`/api/teacher/assignments/${assignmentId}/question-keywords`);
+
+    if (selectedAssignmentId.value !== assignmentId) {
+      return;
+    }
+
+    keywordSummary.value = data;
+  } catch (error) {
+    keywordSummary.value = [];
+    setMessage(error.message || '加载关键词统计失败。', 'error');
+  } finally {
+    loadingKeywordSummary.value = false;
   }
 }
 
@@ -243,6 +284,40 @@ async function publishAssignment() {
   } finally {
     publishing.value = false;
   }
+}
+
+async function openKeywordDetail(keyword) {
+  if (!selectedAssignmentId.value || !keyword) {
+    return;
+  }
+
+  const assignmentId = selectedAssignmentId.value;
+  showKeywordDetailModal.value = true;
+  loadingKeywordDetail.value = true;
+  selectedKeywordDetail.value = null;
+
+  try {
+    const detail = await request(
+      `/api/teacher/assignments/${assignmentId}/question-keywords/detail?keyword=${encodeURIComponent(keyword)}`,
+    );
+
+    if (!showKeywordDetailModal.value || selectedAssignmentId.value !== assignmentId) {
+      return;
+    }
+
+    selectedKeywordDetail.value = detail;
+  } catch (error) {
+    selectedKeywordDetail.value = null;
+    setMessage(error.message || '加载关键词明细失败。', 'error');
+  } finally {
+    loadingKeywordDetail.value = false;
+  }
+}
+
+function closeKeywordDetail() {
+  showKeywordDetailModal.value = false;
+  loadingKeywordDetail.value = false;
+  selectedKeywordDetail.value = null;
 }
 
 function openFilePreview() {
@@ -387,6 +462,73 @@ function goLogin() {
           <strong>{{ selectedAnsweredCount }}</strong>
           <small>当前作业可见的提交记录</small>
         </article>
+      </section>
+
+      <section class="panel keyword-board">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">问题关键词</p>
+            <h2>{{ selectedAssignment ? '本次作业里学生最常问的问题' : '请先选择一份作业' }}</h2>
+          </div>
+          <span v-if="selectedAssignment" class="head-tag">
+            {{ loadingKeywordSummary ? '统计中' : `${keywordSummary.length} 个高频词` }}
+          </span>
+        </div>
+
+        <div v-if="!selectedAssignment" class="empty-state compact-empty">
+          <strong>先选择作业</strong>
+          <p>选中作业后，这里会统计学生提问里出现频率最高的关键词，并支持点开查看原始问答。</p>
+        </div>
+
+        <div v-else-if="loadingKeywordSummary" class="empty-state compact-empty">
+          <strong>正在统计关键词</strong>
+          <p>系统正在分析当前作业下全部学生提问的高频词。</p>
+        </div>
+
+        <div v-else-if="!keywordSummary.length" class="empty-state compact-empty">
+          <strong>还没有可统计的问题</strong>
+          <p>当前作业还没有足够的提问记录，学生开始对话后这里会自动出现关键词汇总。</p>
+        </div>
+
+        <div v-else class="keyword-board-body">
+          <div class="keyword-overview-grid">
+            <article class="keyword-overview-card">
+              <span>关键词总数</span>
+              <strong>{{ keywordSummary.length }}</strong>
+              <small>当前展示的高频问题标签</small>
+            </article>
+            <article class="keyword-overview-card">
+              <span>累计命中次数</span>
+              <strong>{{ keywordQuestionCount }}</strong>
+              <small>按提问轮次去重统计</small>
+            </article>
+            <article class="keyword-overview-card">
+              <span>平均涉及学生</span>
+              <strong>{{ keywordStudentCoverage }}</strong>
+              <small>每个关键词平均覆盖的学生人数</small>
+            </article>
+          </div>
+
+          <div class="keyword-chip-grid">
+            <button
+              v-for="item in keywordSummary"
+              :key="item.keyword"
+              type="button"
+              class="keyword-chip-card"
+              @click="openKeywordDetail(item.keyword)"
+            >
+              <div class="keyword-chip-head">
+                <strong>{{ item.keyword }}</strong>
+                <span>{{ item.count }} 次</span>
+              </div>
+              <p>{{ item.student_count }} 名学生提到过</p>
+              <small v-if="item.sample_prompts.length">
+                {{ item.sample_prompts.join(' · ') }}
+              </small>
+              <small v-else>点击查看命中的原始提问与回答</small>
+            </button>
+          </div>
+        </div>
       </section>
 
       <section class="workspace-grid">
@@ -639,6 +781,80 @@ function goLogin() {
         <div class="modal-actions">
           <button class="ghost-button" type="button" @click="closePublishModal">取消</button>
           <button class="primary-button" type="button" :disabled="publishing" @click="publishAssignment">{{ publishing ? '发布中...' : '确认发布' }}</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showKeywordDetailModal" class="modal-overlay" @click.self="closeKeywordDetail">
+      <div class="modal-card panel keyword-modal">
+        <div class="section-head modal-head">
+          <div>
+            <p class="eyebrow">关键词明细</p>
+            <h2>{{ selectedKeywordDetail?.keyword || '正在加载关键词...' }}</h2>
+          </div>
+          <button class="icon-button" type="button" @click="closeKeywordDetail">×</button>
+        </div>
+
+        <div v-if="loadingKeywordDetail" class="empty-state detail-empty">
+          <strong>正在加载关键词明细</strong>
+          <p>系统正在整理命中该关键词的学生原始提问和 AI 回答。</p>
+        </div>
+
+        <div v-else-if="!selectedKeywordDetail?.matches?.length" class="empty-state detail-empty">
+          <strong>没有匹配记录</strong>
+          <p>当前关键词下暂时没有可展示的原始问答。</p>
+        </div>
+
+        <div v-else class="keyword-detail-body">
+          <div class="keyword-detail-stats">
+            <article class="keyword-detail-stat">
+              <span>关键词</span>
+              <strong>{{ selectedKeywordDetail.keyword }}</strong>
+            </article>
+            <article class="keyword-detail-stat">
+              <span>命中次数</span>
+              <strong>{{ selectedKeywordDetail.count }}</strong>
+            </article>
+            <article class="keyword-detail-stat">
+              <span>涉及学生</span>
+              <strong>{{ selectedKeywordDetail.student_count }}</strong>
+            </article>
+          </div>
+
+          <div class="keyword-match-list">
+            <article
+              v-for="match in selectedKeywordDetail.matches"
+              :key="match.record_id"
+              class="keyword-match-card"
+            >
+              <div class="keyword-match-head">
+                <div>
+                  <strong>{{ match.student_name }}</strong>
+                  <span>{{ match.student_account }} · 对话 {{ match.conversation_id }}</span>
+                </div>
+                <span class="file-chip">{{ formatTime(match.generated_at) }}</span>
+              </div>
+
+              <div class="keyword-match-section">
+                <span>学生原始提问</span>
+                <pre class="keyword-match-content">{{ match.prompt }}</pre>
+              </div>
+
+              <div class="keyword-match-section">
+                <span>AI 回答</span>
+                <pre class="keyword-match-content">{{ match.content }}</pre>
+              </div>
+
+              <div v-if="match.submission_answer_preview" class="keyword-match-section is-compact">
+                <span>学生最终提交摘要</span>
+                <p>{{ match.submission_answer_preview }}</p>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="ghost-button" type="button" @click="closeKeywordDetail">关闭</button>
         </div>
       </div>
     </div>

@@ -138,6 +138,34 @@ class TeacherAiUsageSummaryResponse(BaseModel):
     timeline: list[TeacherAiUsageTimelineItemResponse] = Field(default_factory=list)
 
 
+class TeacherAssignmentKeywordResponse(BaseModel):
+    keyword: str
+    count: int
+    student_count: int
+    sample_prompts: list[str] = Field(default_factory=list)
+    sample_students: list[str] = Field(default_factory=list)
+
+
+class TeacherAssignmentKeywordMatchResponse(BaseModel):
+    record_id: int
+    conversation_id: int
+    student_id: int
+    student_account: str
+    student_name: str
+    generated_at: datetime
+    prompt: str
+    content: str
+    submitted_at: datetime | None = None
+    submission_answer_preview: str | None = None
+
+
+class TeacherAssignmentKeywordDetailResponse(BaseModel):
+    keyword: str
+    count: int
+    student_count: int
+    matches: list[TeacherAssignmentKeywordMatchResponse] = Field(default_factory=list)
+
+
 class TeacherAssignmentSubmissionResponse(BaseModel):
     student_id: int
     student_account: str

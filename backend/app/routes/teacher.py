@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 
 from app.crud import (
     create_assignment_with_conversations,
+    get_assignment_keyword_detail,
     get_assignment_submission_detail,
+    list_assignment_question_keywords,
     list_assignment_submissions,
     list_assignments_by_teacher,
 )
@@ -12,6 +14,8 @@ from app.models import UserRole
 from app.schemas import (
     AssignmentCreateRequest,
     TeacherAssignmentResponse,
+    TeacherAssignmentKeywordDetailResponse,
+    TeacherAssignmentKeywordResponse,
     TeacherAssignmentSubmissionDetailResponse,
     TeacherAssignmentSubmissionResponse,
 )
@@ -61,6 +65,44 @@ def get_assignment_submissions(
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Assignment not found')
     return [TeacherAssignmentSubmissionResponse(**item) for item in result['submissions']]
+
+
+@router.get(
+    '/assignments/{assignment_id}/question-keywords',
+    response_model=list[TeacherAssignmentKeywordResponse],
+)
+def get_assignment_question_keywords(
+    assignment_id: int,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_teacher(current_user)
+    result = list_assignment_question_keywords(db, assignment_id=assignment_id, teacher_id=current_user.id)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Assignment not found')
+    return [TeacherAssignmentKeywordResponse(**item) for item in result['keywords']]
+
+
+@router.get(
+    '/assignments/{assignment_id}/question-keywords/detail',
+    response_model=TeacherAssignmentKeywordDetailResponse,
+)
+def get_assignment_question_keyword_detail(
+    assignment_id: int,
+    keyword: str,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    _require_teacher(current_user)
+    result = get_assignment_keyword_detail(
+        db,
+        assignment_id=assignment_id,
+        teacher_id=current_user.id,
+        keyword=keyword,
+    )
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Assignment not found')
+    return TeacherAssignmentKeywordDetailResponse(**result)
 
 
 @router.get(
