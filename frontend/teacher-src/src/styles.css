@@ -903,6 +903,42 @@ h2,
   margin-top: 18px;
 }
 
+.publish-note-card {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 18px 20px;
+  border-radius: 22px;
+  border: 1px solid rgba(16, 120, 107, 0.14);
+  background:
+    linear-gradient(145deg, rgba(242, 255, 251, 0.96), rgba(255, 255, 255, 0.95)),
+    radial-gradient(circle at top right, rgba(16, 120, 107, 0.08), transparent 34%);
+}
+
+.publish-note-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.publish-note-head h3 {
+  margin: 6px 0 0;
+  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.publish-note-card p {
+  margin: 0;
+  color: var(--teacher-soft);
+  line-height: 1.8;
+}
+
+.publish-note-card .ghost-button {
+  justify-self: start;
+}
+
 .keyword-detail-body {
   display: grid;
   gap: 18px;

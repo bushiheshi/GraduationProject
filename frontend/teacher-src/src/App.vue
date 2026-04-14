@@ -62,6 +62,29 @@ const keywordStudentCoverage = computed(() => {
   const total = keywordSummary.value.reduce((sum, item) => sum + item.student_count, 0);
   return keywordSummary.value.length ? Math.round(total / keywordSummary.value.length) : 0;
 });
+const currentMasteryLevel = computed(() => {
+  if (!selectedAssignment.value) {
+    return '待生成';
+  }
+
+  if (selectedCompletionRate.value >= 85) {
+    return '掌握较好';
+  }
+  if (selectedCompletionRate.value >= 60) {
+    return '基本掌握';
+  }
+  if (selectedCompletionRate.value >= 40) {
+    return '需要巩固';
+  }
+  return '掌握较弱';
+});
+const currentMasteryGuidance = computed(() => {
+  if (!selectedAssignment.value) {
+    return '当前还没有选中作业。发布新作业时，建议在作业说明里写清教材页数、章节范围和知识点，这样系统后续才能更准确判断学生的知识掌握程度。';
+  }
+
+  return `基于当前作业的提交率 ${selectedCompletionRate.value}% 和学生提交情况，可将当前学生知识掌握程度暂评为“${currentMasteryLevel.value}”。建议在作业说明里补充教材页数，例如“第 3 章第 42-47 页”，这样后续统计会更准确。`;
+});
 
 onMounted(async () => {
   if (!token.value) {
@@ -238,6 +261,17 @@ function closePublishModal() {
     return;
   }
   showPublishModal.value = false;
+}
+
+function insertPublishTemplate() {
+  const template = [
+    '教材页数：第__章第__页至第__页',
+    `当前学生知识掌握程度：${currentMasteryLevel.value}`,
+    '作业要求：',
+  ].join('\n');
+
+  const currentDescription = form.value.description.trim();
+  form.value.description = currentDescription ? `${currentDescription}\n\n${template}` : template;
 }
 
 async function publishAssignment() {
@@ -758,6 +792,18 @@ function goLogin() {
           <button class="icon-button" type="button" @click="closePublishModal">×</button>
         </div>
 
+        <section class="publish-note-card">
+          <div class="publish-note-head">
+            <div>
+              <p class="eyebrow">当前学生知识掌握程度</p>
+              <h3>{{ currentMasteryLevel }}</h3>
+            </div>
+            <span class="head-tag">建议写明教材页数</span>
+          </div>
+          <p>{{ currentMasteryGuidance }}</p>
+          <button class="ghost-button" type="button" @click="insertPublishTemplate">插入描述模板</button>
+        </section>
+
         <label class="field">
           <span>作业标题</span>
           <input v-model="form.title" type="text" maxlength="120" placeholder="例如：数据结构实验一" />
@@ -765,7 +811,12 @@ function goLogin() {
 
         <label class="field">
           <span>作业说明</span>
-          <textarea v-model="form.description" rows="6" maxlength="4000" placeholder="填写作业要求、评分说明或提交约束。"></textarea>
+          <textarea
+            v-model="form.description"
+            rows="6"
+            maxlength="4000"
+            placeholder="填写作业要求、评分说明或提交约束，最好注明教材页数，例如：第3章第42-47页。"
+          ></textarea>
         </label>
 
         <div class="modal-actions">
