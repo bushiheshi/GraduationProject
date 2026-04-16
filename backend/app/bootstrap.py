@@ -1,7 +1,16 @@
 from sqlalchemy import inspect, text
 
 from app.database import Base, SessionLocal, engine
-from app.models import AnswerSubmission, Assignment, ChatConversation, ChatRecord, User, UserRole
+from app.models import (
+    AnswerSubmission,
+    Assignment,
+    ChatConversation,
+    ChatRecord,
+    ClassMembership,
+    GradeClass,
+    User,
+    UserRole,
+)
 from app.security import get_password_hash
 
 
@@ -634,6 +643,51 @@ def seed_default_users() -> None:
         db.close()
 
 
+def seed_default_grade_class_memberships() -> None:
+    db = SessionLocal()
+    try:
+        grade_class = db.query(GradeClass).filter(GradeClass.name == '26级5班').first()
+        if not grade_class:
+            grade_class = GradeClass(
+                grade_label='26级',
+                class_label='5班',
+                name='26级5班',
+            )
+            db.add(grade_class)
+            db.flush()
+
+        teacher = (
+            db.query(User)
+            .filter(User.account == 'teacher002', User.role == UserRole.TEACHER, User.is_active.is_(True))
+            .first()
+        )
+        if not teacher:
+            teacher = (
+                db.query(User)
+                .filter(User.account == 'teacher001', User.role == UserRole.TEACHER, User.is_active.is_(True))
+                .first()
+            )
+
+        users = db.query(User).filter(User.role == UserRole.STUDENT, User.is_active.is_(True)).all()
+        if teacher:
+            users.append(teacher)
+
+        existing_user_ids = set(
+            user_id
+            for (user_id,) in db.query(ClassMembership.user_id)
+            .filter(ClassMembership.class_id == grade_class.id)
+            .all()
+        )
+        for user in users:
+            if user.id in existing_user_ids:
+                continue
+            db.add(ClassMembership(class_id=grade_class.id, user_id=user.id))
+
+        db.commit()
+    finally:
+        db.close()
+
+
 def init_app_database(*, seed_demo_users: bool = True) -> None:
     create_tables()
     ensure_assignment_schema()
@@ -644,6 +698,7 @@ def init_app_database(*, seed_demo_users: bool = True) -> None:
 
     if seed_demo_users:
         seed_default_users()
+        seed_default_grade_class_memberships()
 
 
 def ping_database() -> None:
