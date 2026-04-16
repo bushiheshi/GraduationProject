@@ -48,14 +48,14 @@ python scripts/init_db.py
 5. Run API (from `backend` directory):
 
 ```powershell
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn app.main:app --host 0.0.0.0 --port 18080 --reload
 ```
 
 ## 2. Frontend (Vue3)
 
 - Vue3 frontend source is in `frontend/`.
-- Login page: `http://127.0.0.1:8000/` (served from `frontend/login.html`)
-- Student page: `http://127.0.0.1:8000/frontend/student.html`
+- Login page: `http://127.0.0.1:18080/` (served from `frontend/login.html`)
+- Student page: `http://127.0.0.1:18080/frontend/student.html`
 - After student login success, it automatically redirects to student page.
 
 ## 3. APIs

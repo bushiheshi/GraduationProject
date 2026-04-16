@@ -128,6 +128,8 @@ createApp({
       prompt: '',
       loading: false,
       creatingConversation: false,
+      refreshTimer: null,
+      refreshingConversations: false,
       message: '',
       messageType: '',
     };
@@ -152,6 +154,7 @@ createApp({
       this.user = me;
       await this.loadModels();
       await this.loadConversations();
+      this.startAutoRefresh();
       this.message = '左侧选择对话即可继续上下文';
       this.messageType = 'success';
     } catch (error) {
@@ -160,6 +163,9 @@ createApp({
       localStorage.removeItem('access_token');
       setTimeout(() => this.goLogin(), 800);
     }
+  },
+  beforeUnmount() {
+    window.clearInterval(this.refreshTimer);
   },
   methods: {
     renderMarkdown(content) {
@@ -212,6 +218,37 @@ createApp({
       } else {
         this.records = [];
         this.resetAnswerEditor();
+      }
+    },
+
+    startAutoRefresh() {
+      window.clearInterval(this.refreshTimer);
+      this.refreshTimer = window.setInterval(() => {
+        this.refreshConversationList();
+      }, 5000);
+    },
+
+    async refreshConversationList() {
+      if (this.refreshingConversations || !this.token) {
+        return;
+      }
+
+      this.refreshingConversations = true;
+      try {
+        const conversations = await this.request('/api/chat/conversations');
+        const activeStillExists = this.activeConversationId
+          && conversations.some((item) => item.id === this.activeConversationId);
+
+        this.conversations = conversations;
+
+        if (!activeStillExists && conversations.length > 0) {
+          this.activeConversationId = conversations[0].id;
+          await this.loadConversationData(this.activeConversationId);
+        }
+      } catch (error) {
+        console.warn('Failed to refresh conversations', error);
+      } finally {
+        this.refreshingConversations = false;
       }
     },
 

@@ -146,6 +146,24 @@ class TeacherAssignmentKeywordResponse(BaseModel):
     sample_students: list[str] = Field(default_factory=list)
 
 
+class TeacherQuestionStudentStatResponse(BaseModel):
+    student_id: int
+    student_account: str
+    student_name: str
+    question_count: int
+    assignment_count: int
+    last_asked_at: datetime | None = None
+
+
+class TeacherQuestionOverviewResponse(BaseModel):
+    total_question_count: int
+    student_count: int
+    keyword_count: int
+    total_keyword_hits: int
+    keywords: list[TeacherAssignmentKeywordResponse] = Field(default_factory=list)
+    students: list[TeacherQuestionStudentStatResponse] = Field(default_factory=list)
+
+
 class TeacherAssignmentKeywordMatchResponse(BaseModel):
     record_id: int
     conversation_id: int

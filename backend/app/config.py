@@ -9,7 +9,7 @@ class Settings(BaseSettings):
 
     app_name: str = 'AIGC Classroom Platform'
     app_host: str = '0.0.0.0'
-    app_port: int = 8000
+    app_port: int = 18080
     debug: bool = True
 
     database_url: str | None = None

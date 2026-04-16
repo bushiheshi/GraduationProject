@@ -825,6 +825,99 @@ def list_assignment_question_keywords(
     }
 
 
+def get_teacher_question_overview(
+    db: Session,
+    *,
+    teacher_id: int,
+    keyword_limit: int = 20,
+    student_limit: int = 50,
+) -> dict[str, Any]:
+    rows = _list_teacher_assignment_chat_keyword_rows(db, teacher_id=teacher_id)
+    keyword_index: dict[str, dict[str, Any]] = {}
+    student_index: dict[int, dict[str, Any]] = {}
+    total_question_count = 0
+
+    for row in rows:
+        record = row['record']
+        user = row['user']
+        assignment_id = row['assignment_id']
+        prompt = record.prompt or ''
+        if not prompt.strip():
+            continue
+
+        total_question_count += 1
+
+        student_item = student_index.setdefault(
+            int(user.id),
+            {
+                'student_id': int(user.id),
+                'student_account': user.account,
+                'student_name': user.name,
+                'question_count': 0,
+                'assignment_ids': set(),
+                'last_asked_at': None,
+            },
+        )
+        student_item['question_count'] += 1
+        if assignment_id is not None:
+            student_item['assignment_ids'].add(int(assignment_id))
+        if student_item['last_asked_at'] is None or record.generated_at > student_item['last_asked_at']:
+            student_item['last_asked_at'] = record.generated_at
+
+        for keyword in _extract_prompt_keywords(prompt):
+            keyword_item = keyword_index.setdefault(
+                keyword,
+                {
+                    'keyword': keyword,
+                    'count': 0,
+                    'student_ids': set(),
+                    'sample_prompts': [],
+                    'sample_students': [],
+                },
+            )
+            keyword_item['count'] += 1
+            keyword_item['student_ids'].add(int(user.id))
+            if len(keyword_item['sample_prompts']) < KEYWORD_SAMPLE_LIMIT and prompt not in keyword_item['sample_prompts']:
+                keyword_item['sample_prompts'].append(_build_prompt_preview(prompt, limit=72))
+            if len(keyword_item['sample_students']) < KEYWORD_SAMPLE_LIMIT and user.name not in keyword_item['sample_students']:
+                keyword_item['sample_students'].append(user.name)
+
+    keywords = _select_top_keywords(keyword_index.values(), limit=keyword_limit)
+    students = [
+        {
+            'student_id': item['student_id'],
+            'student_account': item['student_account'],
+            'student_name': item['student_name'],
+            'question_count': item['question_count'],
+            'assignment_count': len(item['assignment_ids']),
+            'last_asked_at': item['last_asked_at'],
+        }
+        for item in student_index.values()
+    ]
+    def _student_question_sort_key(item: dict[str, Any]) -> tuple[int, int, int, int, int, int, str]:
+        last_asked_at = item['last_asked_at'] or datetime.min
+        return (
+            -item['question_count'],
+            -last_asked_at.toordinal(),
+            -last_asked_at.hour,
+            -last_asked_at.minute,
+            -last_asked_at.second,
+            -last_asked_at.microsecond,
+            item['student_name'],
+        )
+
+    students.sort(key=_student_question_sort_key)
+
+    return {
+        'total_question_count': total_question_count,
+        'student_count': len(student_index),
+        'keyword_count': len(keyword_index),
+        'total_keyword_hits': sum(item['count'] for item in keyword_index.values()),
+        'keywords': keywords,
+        'students': students[:student_limit],
+    }
+
+
 def get_assignment_keyword_detail(
     db: Session,
     *,
@@ -1127,6 +1220,29 @@ def _list_assignment_chat_keyword_rows(db: Session, *, assignment_id: int) -> li
             'record': row[0],
             'user': row[1],
             'submission': row[2],
+        }
+        for row in rows
+    ]
+
+
+def _list_teacher_assignment_chat_keyword_rows(db: Session, *, teacher_id: int) -> list[dict[str, Any]]:
+    rows = db.execute(
+        select(ChatRecord, User, ChatConversation.assignment_id)
+        .join(ChatConversation, ChatConversation.id == ChatRecord.conversation_id)
+        .join(Assignment, Assignment.id == ChatConversation.assignment_id)
+        .join(User, User.id == ChatConversation.user_id)
+        .where(
+            Assignment.teacher_id == teacher_id,
+            User.role == UserRole.STUDENT,
+        )
+        .order_by(ChatRecord.generated_at.asc(), ChatRecord.id.asc())
+    ).all()
+
+    return [
+        {
+            'record': row[0],
+            'user': row[1],
+            'assignment_id': row[2],
         }
         for row in rows
     ]

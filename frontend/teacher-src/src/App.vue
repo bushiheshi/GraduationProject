@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
 const token = ref(localStorage.getItem('access_token') || '');
 const user = ref(null);
@@ -7,6 +7,8 @@ const assignments = ref([]);
 const selectedAssignmentId = ref(null);
 const submissions = ref([]);
 const keywordSummary = ref([]);
+const questionOverview = ref(null);
+const isQuestionOverviewExpanded = ref(false);
 const selectedStudentId = ref(null);
 const selectedSubmissionDetail = ref(null);
 const selectedKeywordDetail = ref(null);
@@ -14,6 +16,7 @@ const loadingAssignments = ref(false);
 const loadingSubmissions = ref(false);
 const loadingSubmissionDetail = ref(false);
 const loadingKeywordSummary = ref(false);
+const loadingQuestionOverview = ref(false);
 const loadingKeywordDetail = ref(false);
 const publishing = ref(false);
 const showPublishModal = ref(false);
@@ -25,6 +28,10 @@ const form = ref({
   title: '',
   description: '',
 });
+let refreshTimer = null;
+let refreshingDashboard = false;
+const TEACHER_REFRESH_INTERVAL_MS = 30 * 60 * 1000;
+const OVERVIEW_COLLAPSED_LIMIT = 5;
 
 const selectedAssignment = computed(() => {
   return assignments.value.find((item) => item.id === selectedAssignmentId.value) || null;
@@ -62,6 +69,30 @@ const keywordStudentCoverage = computed(() => {
   const total = keywordSummary.value.reduce((sum, item) => sum + item.student_count, 0);
   return keywordSummary.value.length ? Math.round(total / keywordSummary.value.length) : 0;
 });
+const overviewKeywords = computed(() => questionOverview.value?.keywords || []);
+const overviewStudents = computed(() => questionOverview.value?.students || []);
+const visibleOverviewKeywords = computed(() => {
+  if (isQuestionOverviewExpanded.value) {
+    return overviewKeywords.value;
+  }
+  return overviewKeywords.value.slice(0, OVERVIEW_COLLAPSED_LIMIT);
+});
+const visibleOverviewStudents = computed(() => {
+  if (isQuestionOverviewExpanded.value) {
+    return overviewStudents.value;
+  }
+  return overviewStudents.value.slice(0, OVERVIEW_COLLAPSED_LIMIT);
+});
+const canToggleQuestionOverview = computed(() => {
+  return (
+    overviewKeywords.value.length > OVERVIEW_COLLAPSED_LIMIT
+    || overviewStudents.value.length > OVERVIEW_COLLAPSED_LIMIT
+  );
+});
+const overviewQuestionCount = computed(() => questionOverview.value?.total_question_count || 0);
+const overviewStudentCount = computed(() => questionOverview.value?.student_count || 0);
+const overviewKeywordCount = computed(() => questionOverview.value?.keyword_count || 0);
+const overviewKeywordHits = computed(() => questionOverview.value?.total_keyword_hits || 0);
 const currentMasteryLevel = computed(() => {
   if (!selectedAssignment.value) {
     return '待生成';
@@ -99,13 +130,18 @@ onMounted(async () => {
     }
 
     user.value = me;
-    await loadAssignments();
+    await Promise.all([loadAssignments(), loadQuestionOverview()]);
+    startAutoRefresh();
     setMessage('教师工作台已支持查看每位学生的 AI 使用分析。', 'success');
   } catch (error) {
     localStorage.removeItem('access_token');
     setMessage(error.message || '登录状态已失效。', 'error');
     window.setTimeout(goLogin, 600);
   }
+});
+
+onBeforeUnmount(() => {
+  window.clearInterval(refreshTimer);
 });
 
 async function request(url, options = {}) {
@@ -166,7 +202,7 @@ async function selectAssignment(assignmentId) {
   ]);
 }
 
-async function loadSubmissions(assignmentId) {
+async function loadSubmissions(assignmentId, options = {}) {
   if (!assignmentId) {
     submissions.value = [];
     selectedStudentId.value = null;
@@ -175,8 +211,10 @@ async function loadSubmissions(assignmentId) {
   }
 
   loadingSubmissions.value = true;
-  selectedStudentId.value = null;
-  selectedSubmissionDetail.value = null;
+  if (!options.preserveSelection) {
+    selectedStudentId.value = null;
+    selectedSubmissionDetail.value = null;
+  }
   try {
     const data = await request(`/api/teacher/assignments/${assignmentId}/submissions`);
     if (selectedAssignmentId.value !== assignmentId) {
@@ -189,8 +227,10 @@ async function loadSubmissions(assignmentId) {
     }
   } catch (error) {
     submissions.value = [];
-    selectedStudentId.value = null;
-    selectedSubmissionDetail.value = null;
+    if (!options.preserveSelection) {
+      selectedStudentId.value = null;
+      selectedSubmissionDetail.value = null;
+    }
     setMessage(error.message || '加载提交列表失败。', 'error');
   } finally {
     loadingSubmissions.value = false;
@@ -217,6 +257,79 @@ async function loadKeywordSummary(assignmentId) {
     setMessage(error.message || '加载关键词统计失败。', 'error');
   } finally {
     loadingKeywordSummary.value = false;
+  }
+}
+
+async function loadQuestionOverview() {
+  loadingQuestionOverview.value = true;
+  try {
+    questionOverview.value = await request('/api/teacher/question-overview');
+    isQuestionOverviewExpanded.value = false;
+  } catch (error) {
+    questionOverview.value = null;
+    isQuestionOverviewExpanded.value = false;
+    setMessage(error.message || '加载总体问题统计失败。', 'error');
+  } finally {
+    loadingQuestionOverview.value = false;
+  }
+}
+
+function toggleQuestionOverview() {
+  isQuestionOverviewExpanded.value = !isQuestionOverviewExpanded.value;
+}
+
+function startAutoRefresh() {
+  window.clearInterval(refreshTimer);
+  refreshTimer = window.setInterval(() => {
+    refreshDashboard();
+  }, TEACHER_REFRESH_INTERVAL_MS);
+}
+
+async function refreshDashboard() {
+  if (refreshingDashboard || publishing.value || !token.value) {
+    return;
+  }
+
+  refreshingDashboard = true;
+  const currentAssignmentId = selectedAssignmentId.value;
+  const currentStudentId = selectedStudentId.value;
+
+  try {
+    const [latestAssignments] = await Promise.all([
+      request('/api/teacher/assignments'),
+      loadQuestionOverview(),
+    ]);
+
+    assignments.value = latestAssignments;
+
+    if (!currentAssignmentId) {
+      return;
+    }
+
+    const assignmentStillExists = latestAssignments.some((item) => item.id === currentAssignmentId);
+    if (!assignmentStillExists) {
+      selectedAssignmentId.value = null;
+      submissions.value = [];
+      keywordSummary.value = [];
+      selectedStudentId.value = null;
+      selectedSubmissionDetail.value = null;
+      return;
+    }
+
+    selectedAssignmentId.value = currentAssignmentId;
+    await Promise.all([
+      loadSubmissions(currentAssignmentId, { preserveSelection: true, silent: true }),
+      loadKeywordSummary(currentAssignmentId),
+    ]);
+
+    if (currentStudentId) {
+      selectedStudentId.value = currentStudentId;
+      await loadSubmissionDetail(currentAssignmentId, currentStudentId, { silent: true });
+    }
+  } catch (error) {
+    console.warn('Failed to refresh teacher dashboard', error);
+  } finally {
+    refreshingDashboard = false;
   }
 }
 
@@ -301,7 +414,7 @@ async function publishAssignment() {
     form.value.title = '';
     form.value.description = '';
     showPublishModal.value = false;
-    await loadAssignments();
+    await Promise.all([loadAssignments(), loadQuestionOverview()]);
     setMessage(`作业已发布，已为 ${created.student_count} 名学生创建提交入口。`, 'success');
   } catch (error) {
     setMessage(error.message || '发布作业失败。', 'error');
@@ -486,6 +599,130 @@ function goLogin() {
           <strong>{{ selectedAnsweredCount }}</strong>
           <small>当前作业可见的提交记录</small>
         </article>
+      </section>
+
+      <section class="panel overview-board">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">总体问题统计</p>
+            <h2>全部作业里的学生提问</h2>
+          </div>
+          <span class="head-tag">
+            {{ loadingQuestionOverview ? '统计中' : `${overviewQuestionCount} 次提问` }}
+          </span>
+        </div>
+
+        <div v-if="loadingQuestionOverview" class="empty-state compact-empty">
+          <strong>正在整理总体问题统计</strong>
+          <p>系统正在汇总全部作业下学生对话里的提问次数和关键词。</p>
+        </div>
+
+        <div v-else-if="!overviewQuestionCount" class="empty-state compact-empty">
+          <strong>还没有可统计的提问</strong>
+          <p>学生开始在作业对话里提问后，这里会展示整体提问次数、关键词次数和学生提问排行。</p>
+        </div>
+
+        <div v-else class="overview-board-body">
+          <div class="keyword-overview-grid overview-stat-grid">
+            <article class="keyword-overview-card">
+              <span>总体提问次数</span>
+              <strong>{{ overviewQuestionCount }}</strong>
+              <small>全部作业下的学生 AI 提问轮次</small>
+            </article>
+            <article class="keyword-overview-card">
+              <span>提问学生数</span>
+              <strong>{{ overviewStudentCount }}</strong>
+              <small>产生过提问记录的学生人数</small>
+            </article>
+            <article class="keyword-overview-card">
+              <span>关键词总数</span>
+              <strong>{{ overviewKeywordCount }}</strong>
+              <small>从学生问题中提取出的标签数量</small>
+            </article>
+            <article class="keyword-overview-card">
+              <span>关键词命中</span>
+              <strong>{{ overviewKeywordHits }}</strong>
+              <small>按每轮提问去重后的累计命中次数</small>
+            </article>
+          </div>
+
+          <div class="overview-table-grid">
+            <article class="overview-table-card">
+              <div class="overview-table-head">
+                <div>
+                  <p class="eyebrow">关键词次数</p>
+                  <h3>高频问题关键词</h3>
+                </div>
+                <span class="head-tag">{{ overviewKeywords.length }} 项</span>
+              </div>
+
+              <div class="overview-table-wrap">
+                <table class="overview-table">
+                  <thead>
+                    <tr>
+                      <th>关键词</th>
+                      <th>次数</th>
+                      <th>学生数</th>
+                      <th>样例</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="item in visibleOverviewKeywords" :key="item.keyword">
+                      <td><strong>{{ item.keyword }}</strong></td>
+                      <td>{{ item.count }}</td>
+                      <td>{{ item.student_count }}</td>
+                      <td>{{ item.sample_prompts?.[0] || '-' }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+
+            <article class="overview-table-card">
+              <div class="overview-table-head">
+                <div>
+                  <p class="eyebrow">学生问题次数</p>
+                  <h3>提问学生排行</h3>
+                </div>
+                <span class="head-tag">{{ overviewStudents.length }} 名</span>
+              </div>
+
+              <div class="overview-table-wrap">
+                <table class="overview-table">
+                  <thead>
+                    <tr>
+                      <th>学生</th>
+                      <th>问题次数</th>
+                      <th>涉及作业</th>
+                      <th>最近提问</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="item in visibleOverviewStudents" :key="item.student_id">
+                      <td>
+                        <strong>{{ item.student_name }}</strong>
+                        <small>{{ item.student_account }}</small>
+                      </td>
+                      <td>{{ item.question_count }}</td>
+                      <td>{{ item.assignment_count }}</td>
+                      <td>{{ formatTime(item.last_asked_at) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+
+          <div v-if="canToggleQuestionOverview" class="overview-toggle-row">
+            <button class="overview-toggle-button" type="button" @click="toggleQuestionOverview">
+              {{ isQuestionOverviewExpanded ? '收起总体问题统计' : '展开全部问题统计' }}
+            </button>
+            <span>
+              当前显示 {{ visibleOverviewKeywords.length }}/{{ overviewKeywords.length }} 个关键词，
+              {{ visibleOverviewStudents.length }}/{{ overviewStudents.length }} 名学生
+            </span>
+          </div>
+        </div>
       </section>
 
       <section class="panel keyword-board">

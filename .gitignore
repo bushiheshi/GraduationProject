@@ -6,3 +6,20 @@ __pycache__/
 
 backend/.env
 frontend/node_modules
+node_modules/
+
+*.log
+*.tmp
+*.temp
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage/
+
+dist/
+build/
+
+.DS_Store
+Thumbs.db

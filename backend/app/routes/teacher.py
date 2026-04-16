@@ -5,6 +5,7 @@ from app.crud import (
     create_assignment_with_conversations,
     get_assignment_keyword_detail,
     get_assignment_submission_detail,
+    get_teacher_question_overview,
     list_assignment_question_keywords,
     list_assignment_submissions,
     list_assignments_by_teacher,
@@ -18,6 +19,7 @@ from app.schemas import (
     TeacherAssignmentKeywordResponse,
     TeacherAssignmentSubmissionDetailResponse,
     TeacherAssignmentSubmissionResponse,
+    TeacherQuestionOverviewResponse,
 )
 
 router = APIRouter(prefix='/api/teacher', tags=['teacher'])
@@ -49,6 +51,13 @@ def create_assignment(
         description=payload.description,
     )
     return _to_assignment_response(assignment_data)
+
+
+@router.get('/question-overview', response_model=TeacherQuestionOverviewResponse)
+def get_question_overview(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    _require_teacher(current_user)
+    overview = get_teacher_question_overview(db, teacher_id=current_user.id)
+    return TeacherQuestionOverviewResponse(**overview)
 
 
 @router.get(
