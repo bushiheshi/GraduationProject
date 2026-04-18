@@ -721,6 +721,48 @@ def list_assignment_submissions(
     }
 
 
+def list_assignment_answer_texts_for_assessment(
+    db: Session,
+    *,
+    assignment_id: int,
+    teacher_id: int,
+) -> dict[str, Any] | None:
+    assignment = get_assignment_by_id_for_teacher(db, assignment_id=assignment_id, teacher_id=teacher_id)
+    if assignment is None:
+        return None
+
+    rows = db.execute(
+        select(
+            User.id,
+            User.account,
+            User.name,
+            AnswerSubmission.answer_text,
+        )
+        .join(ChatConversation, ChatConversation.user_id == User.id)
+        .join(AnswerSubmission, AnswerSubmission.conversation_id == ChatConversation.id)
+        .where(
+            ChatConversation.assignment_id == assignment_id,
+            User.role == UserRole.STUDENT,
+            AnswerSubmission.answer_text.is_not(None),
+        )
+        .order_by(User.id.asc())
+    ).all()
+
+    return {
+        'assignment': assignment,
+        'submissions': [
+            {
+                'student_id': int(row[0]),
+                'student_account': row[1],
+                'student_name': row[2],
+                'answer_text': row[3],
+            }
+            for row in rows
+            if row[3] and row[3].strip()
+        ],
+    }
+
+
 def get_assignment_submission_detail(
     db: Session,
     *,

@@ -7,6 +7,7 @@ const assignments = ref([]);
 const selectedAssignmentId = ref(null);
 const submissions = ref([]);
 const keywordSummary = ref([]);
+const assessmentSummary = ref(null);
 const questionOverview = ref(null);
 const isQuestionOverviewExpanded = ref(false);
 const selectedStudentId = ref(null);
@@ -16,6 +17,7 @@ const loadingAssignments = ref(false);
 const loadingSubmissions = ref(false);
 const loadingSubmissionDetail = ref(false);
 const loadingKeywordSummary = ref(false);
+const loadingAssessmentSummary = ref(false);
 const loadingQuestionOverview = ref(false);
 const loadingKeywordDetail = ref(false);
 const publishing = ref(false);
@@ -64,6 +66,12 @@ const selectedCompletionRate = computed(() => {
 });
 const selectedWithFileCount = computed(() => submissions.value.filter((item) => item.source_filename).length);
 const selectedAnsweredCount = computed(() => submissions.value.filter((item) => item.has_submission).length);
+const selectedAverageScore = computed(() => {
+  return assessmentSummary.value?.average_score ?? '-';
+});
+const selectedPassRate = computed(() => {
+  return assessmentSummary.value ? `${assessmentSummary.value.pass_rate}%` : '-';
+});
 const keywordQuestionCount = computed(() => keywordSummary.value.reduce((sum, item) => sum + item.count, 0));
 const keywordStudentCoverage = computed(() => {
   const total = keywordSummary.value.reduce((sum, item) => sum + item.student_count, 0);
@@ -174,6 +182,7 @@ async function loadAssignments() {
     selectedAssignmentId.value = null;
     submissions.value = [];
     keywordSummary.value = [];
+    assessmentSummary.value = null;
     selectedStudentId.value = null;
     selectedSubmissionDetail.value = null;
     selectedKeywordDetail.value = null;
@@ -193,12 +202,14 @@ async function selectAssignment(assignmentId) {
   selectedStudentId.value = null;
   selectedSubmissionDetail.value = null;
   keywordSummary.value = [];
+  assessmentSummary.value = null;
   selectedKeywordDetail.value = null;
   showKeywordDetailModal.value = false;
   showFilePreviewModal.value = false;
   await Promise.all([
     loadSubmissions(assignmentId),
     loadKeywordSummary(assignmentId),
+    loadAssessmentSummary(assignmentId),
   ]);
 }
 
@@ -260,6 +271,27 @@ async function loadKeywordSummary(assignmentId) {
   }
 }
 
+async function loadAssessmentSummary(assignmentId) {
+  if (!assignmentId) {
+    assessmentSummary.value = null;
+    return;
+  }
+
+  loadingAssessmentSummary.value = true;
+  try {
+    const data = await request(`/api/teacher/assignments/${assignmentId}/assessment-summary`);
+    if (selectedAssignmentId.value !== assignmentId) {
+      return;
+    }
+    assessmentSummary.value = data;
+  } catch (error) {
+    assessmentSummary.value = null;
+    setMessage(error.message || '加载学生评估统计失败。', 'error');
+  } finally {
+    loadingAssessmentSummary.value = false;
+  }
+}
+
 async function loadQuestionOverview() {
   loadingQuestionOverview.value = true;
   try {
@@ -311,6 +343,7 @@ async function refreshDashboard() {
       selectedAssignmentId.value = null;
       submissions.value = [];
       keywordSummary.value = [];
+      assessmentSummary.value = null;
       selectedStudentId.value = null;
       selectedSubmissionDetail.value = null;
       return;
@@ -320,6 +353,7 @@ async function refreshDashboard() {
     await Promise.all([
       loadSubmissions(currentAssignmentId, { preserveSelection: true, silent: true }),
       loadKeywordSummary(currentAssignmentId),
+      loadAssessmentSummary(currentAssignmentId),
     ]);
 
     if (currentStudentId) {
@@ -355,7 +389,7 @@ async function loadSubmissionDetail(assignmentId, studentId, options = {}) {
 
     selectedSubmissionDetail.value = detail;
     if (!options.silent) {
-      setMessage(`正在查看 ${detail.student_name} 的提交与 AI 使用情况。`, 'success');
+      setMessage(`正在查看 ${detail.student_name} 的提交、AI 使用情况与评估报告。`, 'success');
     }
   } catch (error) {
     selectedSubmissionDetail.value = null;
@@ -599,6 +633,111 @@ function goLogin() {
           <strong>{{ selectedAnsweredCount }}</strong>
           <small>当前作业可见的提交记录</small>
         </article>
+      </section>
+
+      <section class="panel assessment-board">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">学生评估统计</p>
+            <h2>{{ selectedAssignment ? '当前作业评估报告概览' : '请先选择一份作业' }}</h2>
+          </div>
+          <span v-if="selectedAssignment" class="head-tag">
+            {{ loadingAssessmentSummary ? '统计中' : `${assessmentSummary?.assessed_count || 0} 份报告` }}
+          </span>
+        </div>
+
+        <div v-if="!selectedAssignment" class="empty-state compact-empty">
+          <strong>等待选择作业</strong>
+          <p>选中作业后，这里会统计学生提交评估报告的平均分、达标率和主要风险。</p>
+        </div>
+
+        <div v-else-if="loadingAssessmentSummary" class="empty-state compact-empty">
+          <strong>正在生成评估统计</strong>
+          <p>系统正在汇总当前作业已提交答案的评估报告。</p>
+        </div>
+
+        <div v-else-if="!assessmentSummary?.assessed_count" class="empty-state compact-empty">
+          <strong>暂无可统计报告</strong>
+          <p>学生提交答案后，这里会显示平均分、达标率和常见不足。</p>
+        </div>
+
+        <div v-else class="assessment-board-body">
+          <div class="assessment-stat-grid">
+            <article class="assessment-stat-card">
+              <span>平均分</span>
+              <strong>{{ selectedAverageScore }}</strong>
+              <small>已评估 {{ assessmentSummary.assessed_count }}/{{ assessmentSummary.submitted_count }} 份</small>
+            </article>
+            <article class="assessment-stat-card">
+              <span>达标率</span>
+              <strong>{{ selectedPassRate }}</strong>
+              <small>{{ assessmentSummary.pass_count }} 人达到 60 分以上</small>
+            </article>
+            <article class="assessment-stat-card">
+              <span>最低分</span>
+              <strong>{{ assessmentSummary.lowest_score }}</strong>
+              <small>最高分 {{ assessmentSummary.highest_score }}</small>
+            </article>
+            <article class="assessment-stat-card">
+              <span>需重点关注</span>
+              <strong>{{ assessmentSummary.at_risk_count }}</strong>
+              <small>低于 60 分或报告等级存疑</small>
+            </article>
+          </div>
+
+          <div class="assessment-insight-grid">
+            <article class="assessment-insight-card">
+              <div class="assessment-card-head">
+                <strong>等级分布</strong>
+                <span>{{ Object.keys(assessmentSummary.level_counts).length }} 类</span>
+              </div>
+              <div class="assessment-chip-list">
+                <span
+                  v-for="(count, label) in assessmentSummary.level_counts"
+                  :key="label"
+                  class="assessment-chip"
+                >
+                  {{ label }} · {{ count }}
+                </span>
+              </div>
+            </article>
+
+            <article class="assessment-insight-card">
+              <div class="assessment-card-head">
+                <strong>常见风险</strong>
+                <span>{{ assessmentSummary.risk_flag_counts.length }} 项</span>
+              </div>
+              <div v-if="assessmentSummary.risk_flag_counts.length" class="assessment-chip-list">
+                <span
+                  v-for="item in assessmentSummary.risk_flag_counts"
+                  :key="item.flag"
+                  class="assessment-chip"
+                >
+                  {{ item.flag }} · {{ item.count }}
+                </span>
+              </div>
+              <p v-else>暂无明显风险标签。</p>
+            </article>
+          </div>
+
+          <div v-if="assessmentSummary.low_score_students.length" class="assessment-low-list">
+            <div class="assessment-card-head">
+              <strong>低分学生提示</strong>
+              <span>最多展示 5 人</span>
+            </div>
+            <article
+              v-for="item in assessmentSummary.low_score_students"
+              :key="item.student_id"
+              class="assessment-low-item"
+            >
+              <div>
+                <strong>{{ item.student_name }}</strong>
+                <span>{{ item.student_account }} · {{ item.score }} 分 · {{ item.label }}</span>
+              </div>
+              <p>{{ item.main_shortcomings[0] || '建议查看该学生完整报告。' }}</p>
+            </article>
+          </div>
+        </div>
       </section>
 
       <section class="panel overview-board">
@@ -1001,6 +1140,66 @@ function goLogin() {
                 <button class="primary-button" type="button" @click="downloadSourceFile">下载 TXT</button>
               </div>
             </div>
+
+            <section v-if="selectedSubmissionDetail.assessment_report" class="assessment-panel">
+              <div class="answer-head">
+                <span>完整评估报告</span>
+                <small>
+                  得分 {{ selectedSubmissionDetail.assessment_report.score }}
+                  · {{ selectedSubmissionDetail.assessment_report.label }}
+                </small>
+              </div>
+
+              <div class="assessment-tag-row">
+                <span
+                  v-for="flag in selectedSubmissionDetail.assessment_report.risk_flags"
+                  :key="flag"
+                  class="usage-tag"
+                >
+                  {{ flag }}
+                </span>
+              </div>
+
+              <div class="assessment-metric-grid">
+                <article
+                  v-for="(value, key) in selectedSubmissionDetail.assessment_report.metrics"
+                  :key="key"
+                  class="assessment-metric-card"
+                >
+                  <span>{{ key }}</span>
+                  <strong>{{ value ?? '未提供' }}</strong>
+                </article>
+              </div>
+
+              <div v-if="selectedSubmissionDetail.assessment_report.supporting_chunks.length" class="assessment-evidence">
+                <span class="file-panel-label">主要教材证据</span>
+                <article
+                  v-for="item in selectedSubmissionDetail.assessment_report.supporting_chunks"
+                  :key="item.chunk_id"
+                  class="assessment-evidence-item"
+                >
+                  <strong>{{ item.chunk_id }} · {{ item.chapter || '未识别章节' }}</strong>
+                  <small>页码 {{ item.page_start }}-{{ item.page_end }} · 相关度 {{ item.combined_score }}</small>
+                  <p>{{ item.snippet }}</p>
+                </article>
+              </div>
+
+              <details class="assessment-markdown" open>
+                <summary>查看 Markdown 报告全文</summary>
+                <pre class="answer-content">{{ selectedSubmissionDetail.assessment_report.report_markdown }}</pre>
+              </details>
+            </section>
+
+            <section v-else-if="selectedSubmissionDetail.has_submission" class="assessment-panel">
+              <div class="answer-head">
+                <span>完整评估报告</span>
+                <small>暂不可用</small>
+              </div>
+              <div class="usage-empty">
+                <strong>评估报告暂未生成</strong>
+                <p>当前提交可以查看正文，但评估模型暂时没有返回报告。</p>
+              </div>
+            </section>
 
             <div v-if="selectedSubmissionDetail.has_submission && selectedSubmissionDetail.answer_text" class="answer-panel">
               <div class="answer-head">

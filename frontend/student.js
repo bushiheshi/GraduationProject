@@ -124,7 +124,10 @@ createApp({
       activeConversationId: null,
       records: [],
       conversationSubmission: null,
+      submissionAssessment: null,
+      submissionAssessmentLoading: false,
       answerEditor: createAnswerEditor(),
+      showAssessmentModal: false,
       prompt: '',
       loading: false,
       creatingConversation: false,
@@ -200,6 +203,8 @@ createApp({
 
     resetAnswerEditor(submission = null) {
       this.conversationSubmission = submission;
+      this.submissionAssessment = null;
+      this.showAssessmentModal = false;
       this.answerEditor = createAnswerEditor(submission);
     },
 
@@ -266,6 +271,43 @@ createApp({
       this.resetAnswerEditor(submission);
       await nextTick();
       this.scrollThreadToBottom();
+    },
+
+    async loadSubmissionAssessment(options = {}) {
+      const conversationId = options.conversationId || this.activeConversationId;
+      if (!conversationId || !this.conversationSubmission) {
+        this.submissionAssessment = null;
+        return;
+      }
+
+      this.submissionAssessmentLoading = true;
+      try {
+        const assessment = await this.request(`/api/chat/conversations/${conversationId}/answer-submission/assessment`);
+        if (this.activeConversationId !== conversationId) {
+          return;
+        }
+        this.submissionAssessment = assessment;
+        if (options.open) {
+          this.showAssessmentModal = true;
+        }
+      } catch (error) {
+        if (this.activeConversationId === conversationId) {
+          this.submissionAssessment = {
+            score: 0,
+            label: '暂不可用',
+            risk_flags: ['评估报告生成失败'],
+            main_shortcomings: [error.message || '暂时无法生成评估报告，请稍后再试。'],
+            advice: '可以先根据题目要求自行检查答案是否覆盖关键步骤。',
+          };
+          if (options.open) {
+            this.showAssessmentModal = true;
+          }
+        }
+      } finally {
+        if (this.activeConversationId === conversationId) {
+          this.submissionAssessmentLoading = false;
+        }
+      }
     },
 
     async openConversation(conversationId) {
@@ -368,11 +410,41 @@ createApp({
       }
     },
 
+    closeAnswerEditor() {
+      this.answerEditor.open = false;
+      this.answerEditor.file = null;
+      this.answerEditor.fileName = '';
+      this.answerEditor.message = '';
+      this.answerEditor.messageType = '';
+    },
+
     answerButtonLabel() {
       if (this.answerEditor.open) {
-        return '收起提交';
+        return '继续编辑';
       }
       return this.conversationSubmission ? '修改答案' : '提交答案';
+    },
+
+    assessmentButtonLabel() {
+      if (this.submissionAssessmentLoading) {
+        return '生成中...';
+      }
+      return this.submissionAssessment ? '查看评估报告' : '生成评估报告';
+    },
+
+    async openAssessmentReport() {
+      if (!this.conversationSubmission || this.submissionAssessmentLoading) {
+        return;
+      }
+      if (!this.submissionAssessment) {
+        await this.loadSubmissionAssessment({ open: true });
+        return;
+      }
+      this.showAssessmentModal = true;
+    },
+
+    closeAssessmentReport() {
+      this.showAssessmentModal = false;
     },
 
     onAnswerFileChange(event) {
@@ -444,8 +516,10 @@ createApp({
         this.answerEditor.text = submission.answer_text || '';
         this.answerEditor.file = null;
         this.answerEditor.fileName = '';
-        this.answerEditor.message = '答案已提交';
+        this.answerEditor.message = '答案已提交，正在生成评估报告...';
         this.answerEditor.messageType = 'success';
+        await this.loadSubmissionAssessment({ conversationId: this.activeConversationId });
+        this.answerEditor.message = '答案已提交，评估报告已生成，可点击按钮查看';
       } catch (error) {
         this.answerEditor.message = error.message || '提交失败';
         this.answerEditor.messageType = 'error';

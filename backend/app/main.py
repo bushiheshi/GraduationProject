@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.bootstrap import init_app_database, ping_database
 from app.config import get_settings
+from app.routes.assessment import router as assessment_router
 from app.routes.auth import router as auth_router
 from app.routes.chat import router as chat_router
 from app.routes.teacher import router as teacher_router
@@ -33,6 +34,7 @@ app = FastAPI(title=settings.app_name, debug=settings.debug, lifespan=lifespan)
 app.include_router(auth_router)
 app.include_router(chat_router)
 app.include_router(teacher_router)
+app.include_router(assessment_router)
 app.mount('/static', StaticFiles(directory=STATIC_DIR), name='static')
 app.mount('/frontend', StaticFiles(directory=FRONTEND_DIR), name='frontend')
 

@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     chat_timeout_seconds: int = 90
     chat_conversation_turn_limit: int = 5
 
+    assessment_kb_dir: str | None = None
+    assessment_embedding_model: str = 'BAAI/bge-small-zh-v1.5'
+    assessment_semantic_top_k: int = 12
+    assessment_report_top_k: int = 5
+
     @property
     def sqlalchemy_database_uri(self) -> str:
         if self.database_url:

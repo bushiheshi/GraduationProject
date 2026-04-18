@@ -38,6 +38,84 @@ class ApiMessage(BaseModel):
     message: str
 
 
+class AssessmentCredibilityRequest(BaseModel):
+    answer_text: str = Field(min_length=1, max_length=100_000)
+    question_text: str | None = Field(default=None, max_length=10_000)
+    chapter: str | None = Field(default=None, max_length=120)
+    section: str | None = Field(default=None, max_length=120)
+    max_order: int | None = Field(default=None, ge=0)
+    semantic_top_k: int | None = Field(default=None, ge=1, le=50)
+    report_top_k: int | None = Field(default=None, ge=1, le=20)
+    ai_rate: float | None = Field(default=None, ge=0.0, le=1.0)
+    ai_source: str | None = Field(default=None, max_length=64)
+    include_report: bool = False
+
+
+class AssessmentCredibilityResponse(BaseModel):
+    score: float
+    label: str
+    metrics: dict
+    method: dict
+    progress_bound: dict
+    risk_flags: list[str] = Field(default_factory=list)
+    supporting_chunks: list[dict] = Field(default_factory=list)
+    future_reference_chunks: list[dict] = Field(default_factory=list)
+    answer_preview: str
+    question_preview: str | None = None
+    report_markdown: str | None = None
+
+
+class StudentAssessmentSummaryResponse(BaseModel):
+    score: float
+    label: str
+    risk_flags: list[str] = Field(default_factory=list)
+    main_shortcomings: list[str] = Field(default_factory=list)
+    advice: str
+
+
+class TeacherSubmissionAssessmentResponse(BaseModel):
+    score: float
+    label: str
+    metrics: dict
+    method: dict
+    progress_bound: dict
+    risk_flags: list[str] = Field(default_factory=list)
+    supporting_chunks: list[dict] = Field(default_factory=list)
+    future_reference_chunks: list[dict] = Field(default_factory=list)
+    answer_preview: str
+    question_preview: str | None = None
+    report_markdown: str
+
+
+class TeacherAssessmentRiskFlagStatResponse(BaseModel):
+    flag: str
+    count: int
+
+
+class TeacherAssessmentLowScoreStudentResponse(BaseModel):
+    student_id: int
+    student_account: str
+    student_name: str
+    score: float
+    label: str
+    main_shortcomings: list[str] = Field(default_factory=list)
+
+
+class TeacherAssessmentSummaryResponse(BaseModel):
+    assignment_id: int
+    submitted_count: int
+    assessed_count: int
+    average_score: float | None = None
+    highest_score: float | None = None
+    lowest_score: float | None = None
+    pass_count: int = 0
+    pass_rate: int = 0
+    at_risk_count: int = 0
+    level_counts: dict[str, int] = Field(default_factory=dict)
+    risk_flag_counts: list[TeacherAssessmentRiskFlagStatResponse] = Field(default_factory=list)
+    low_score_students: list[TeacherAssessmentLowScoreStudentResponse] = Field(default_factory=list)
+
+
 class ChatModelInfo(BaseModel):
     key: str
     provider: str
@@ -209,3 +287,4 @@ class TeacherAssignmentSubmissionDetailResponse(BaseModel):
     source_filename: str | None = None
     answer_text: str | None = None
     ai_usage: TeacherAiUsageSummaryResponse = Field(default_factory=TeacherAiUsageSummaryResponse)
+    assessment_report: TeacherSubmissionAssessmentResponse | None = None

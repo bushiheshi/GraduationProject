@@ -151,60 +151,112 @@
               <button class="ghost submission-toggle" type="button" @click="toggleAnswerEditor">
                 {{ answerButtonLabel() }}
               </button>
+              <button
+                v-if="conversationSubmission"
+                class="ghost submission-toggle"
+                type="button"
+                :disabled="submissionAssessmentLoading"
+                @click="openAssessmentReport"
+              >
+                {{ assessmentButtonLabel() }}
+              </button>
             </div>
           </div>
+        </section>
 
-          <div v-if="answerEditor.open" class="submission-panel">
-            <p v-if="conversationSubmission" class="submission-helper">
-              上次提交时间：{{ formatTime(conversationSubmission.updated_at) }}
-              <template v-if="conversationSubmission.source_filename">
-                · 原文件：{{ conversationSubmission.source_filename }}
-              </template>
-            </p>
-
-            <label class="submission-field">
-              <span>粘贴代码 / 文本答案</span>
-              <textarea
-                v-model="answerEditor.text"
-                class="submission-textarea"
-                rows="8"
-                maxlength="100000"
-                placeholder="可以直接粘贴代码或文本答案。"
-              ></textarea>
-            </label>
-
-            <div class="submission-upload-row">
-              <label class="submission-upload">
-                <input type="file" accept=".txt,text/plain" @change="onAnswerFileChange($event)" />
-                <span>{{ answerEditor.fileName ? '重新选择 .txt 文件' : '上传 .txt 文件' }}</span>
-              </label>
-
-              <button
-                v-if="answerEditor.fileName"
-                class="ghost submission-clear"
-                type="button"
-                @click="clearAnswerFile"
-              >
-                移除文件
-              </button>
+        <section v-if="answerEditor.open" class="student-modal-overlay" @click.self="closeAnswerEditor">
+          <div class="student-modal-card">
+            <div class="student-modal-head">
+              <div>
+                <span class="submission-label">答案提交</span>
+                <h2>{{ conversationSubmission ? '修改答案' : '提交答案' }}</h2>
+              </div>
+              <button class="ghost submission-clear" type="button" @click="closeAnswerEditor">关闭</button>
             </div>
 
-            <p v-if="answerEditor.fileName" class="submission-file-name">
-              待上传文件：{{ answerEditor.fileName }}
-            </p>
+            <div class="submission-panel in-modal">
+              <p v-if="conversationSubmission" class="submission-helper">
+                上次提交时间：{{ formatTime(conversationSubmission.updated_at) }}
+                <template v-if="conversationSubmission.source_filename">
+                  · 原文件：{{ conversationSubmission.source_filename }}
+                </template>
+              </p>
 
-            <p class="submission-note">可只填文本、只传文件，也可同时提交；同时提交时会按“文本 + 文件内容”合并保存。</p>
+              <label class="submission-field">
+                <span>粘贴代码 / 文本答案</span>
+                <textarea
+                  v-model="answerEditor.text"
+                  class="submission-textarea"
+                  rows="8"
+                  maxlength="100000"
+                  placeholder="可以直接粘贴代码或文本答案。"
+                ></textarea>
+              </label>
 
-            <div class="submission-actions">
-              <p :class="['message', answerEditor.messageType]">{{ answerEditor.message }}</p>
-              <button
-                class="primary submission-submit"
-                type="button"
-                :disabled="answerEditor.submitting"
-                @click="submitAnswer"
-              >
-                {{ answerEditor.submitting ? '提交中...' : (conversationSubmission ? '更新答案' : '提交答案') }}
-              </button>
+              <div class="submission-upload-row">
+                <label class="submission-upload">
+                  <input type="file" accept=".txt,text/plain" @change="onAnswerFileChange($event)" />
+                  <span>{{ answerEditor.fileName ? '重新选择 .txt 文件' : '上传 .txt 文件' }}</span>
+                </label>
+
+                <button
+                  v-if="answerEditor.fileName"
+                  class="ghost submission-clear"
+                  type="button"
+                  @click="clearAnswerFile"
+                >
+                  移除文件
+                </button>
+              </div>
+
+              <p v-if="answerEditor.fileName" class="submission-file-name">
+                待上传文件：{{ answerEditor.fileName }}
+              </p>
+
+              <p class="submission-note">可只填文本、只传文件，也可同时提交；同时提交时会按“文本 + 文件内容”合并保存。</p>
+
+              <div class="submission-actions">
+                <p :class="['message', answerEditor.messageType]">{{ answerEditor.message }}</p>
+                <button
+                  class="primary submission-submit"
+                  type="button"
+                  :disabled="answerEditor.submitting"
+                  @click="submitAnswer"
+                >
+                  {{ answerEditor.submitting ? '提交中...' : (conversationSubmission ? '更新答案' : '提交答案') }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section v-if="showAssessmentModal" class="student-modal-overlay" @click.self="closeAssessmentReport">
+          <div class="student-modal-card assessment-modal-card">
+            <div class="student-modal-head">
+              <div>
+                <span class="submission-label">评估报告</span>
+                <h2 v-if="submissionAssessment">
+                  {{ submissionAssessment.score }} 分 · {{ submissionAssessment.label }}
+                </h2>
+                <h2 v-else>正在生成评估报告</h2>
+              </div>
+              <button class="ghost submission-clear" type="button" @click="closeAssessmentReport">关闭</button>
+            </div>
+
+            <div v-if="submissionAssessment && !submissionAssessmentLoading" class="submission-assessment-body in-modal">
+              <div class="assessment-tags">
+                <span v-for="flag in submissionAssessment.risk_flags" :key="flag" class="assessment-tag">{{ flag }}</span>
+              </div>
+              <section>
+                <strong>主要不足</strong>
+                <ul>
+                  <li v-for="item in submissionAssessment.main_shortcomings" :key="item">{{ item }}</li>
+                </ul>
+              </section>
+              <p class="assessment-advice">{{ submissionAssessment.advice }}</p>
+            </div>
+            <div v-else class="submission-assessment-body in-modal">
+              <p class="assessment-advice">系统正在生成评估报告，请稍候...</p>
             </div>
           </div>
         </section>
@@ -234,6 +286,6 @@
       </section>
     </main>
 
-    <script src="/frontend/student.js?v=20260416-sync"></script>
+    <script src="/frontend/student.js?v=20260418-report-modal"></script>
   </body>
 </html>

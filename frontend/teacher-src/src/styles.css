@@ -310,6 +310,118 @@ h2,
   gap: 18px;
 }
 
+.assessment-board {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+}
+
+.assessment-board-body {
+  display: grid;
+  gap: 16px;
+}
+
+.assessment-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.assessment-stat-card,
+.assessment-insight-card,
+.assessment-low-list,
+.assessment-low-item {
+  border: 1px solid rgba(26, 37, 48, 0.07);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.assessment-stat-card {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+}
+
+.assessment-stat-card span,
+.assessment-stat-card small,
+.assessment-insight-card p,
+.assessment-low-item span,
+.assessment-low-item p {
+  color: var(--teacher-soft);
+}
+
+.assessment-stat-card span,
+.assessment-stat-card small,
+.assessment-low-item span {
+  font-size: 12px;
+}
+
+.assessment-stat-card strong {
+  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  font-size: 30px;
+}
+
+.assessment-insight-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.assessment-insight-card,
+.assessment-low-list {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.assessment-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.assessment-card-head span {
+  color: var(--teacher-soft-2);
+  font-size: 12px;
+}
+
+.assessment-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.assessment-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: rgba(178, 83, 31, 0.1);
+  color: var(--teacher-accent-deep);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.assessment-low-item {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.assessment-low-item div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.assessment-low-item p {
+  margin: 0;
+  line-height: 1.7;
+}
+
 .keyword-board {
   padding: 24px;
   background:
@@ -1158,6 +1270,8 @@ h2,
 
   .spotlight-card,
   .summary-grid,
+  .assessment-stat-grid,
+  .assessment-insight-grid,
   .keyword-overview-grid,
   .overview-table-grid,
   .keyword-detail-stats,
@@ -1411,6 +1525,84 @@ h2,
   display: grid;
   gap: 8px;
   padding: 16px 18px;
+}
+
+.assessment-panel {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 8px;
+  background: linear-gradient(145deg, rgba(255, 252, 247, 0.96), rgba(255, 255, 255, 0.94));
+  border: 1px solid rgba(178, 83, 31, 0.16);
+}
+
+.assessment-tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.assessment-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.assessment-metric-card,
+.assessment-evidence-item {
+  border: 1px solid rgba(26, 37, 48, 0.07);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.assessment-metric-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.assessment-metric-card span,
+.assessment-evidence-item small,
+.assessment-evidence-item p,
+.assessment-markdown summary {
+  color: var(--teacher-soft);
+}
+
+.assessment-metric-card span,
+.assessment-evidence-item small,
+.assessment-markdown summary {
+  font-size: 12px;
+}
+
+.assessment-metric-card strong {
+  font-size: 18px;
+  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+}
+
+.assessment-evidence {
+  display: grid;
+  gap: 10px;
+}
+
+.assessment-evidence-item {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+}
+
+.assessment-evidence-item p {
+  margin: 0;
+  line-height: 1.8;
+}
+
+.assessment-markdown {
+  display: grid;
+  gap: 10px;
+}
+
+.assessment-markdown summary {
+  cursor: pointer;
+  font-weight: 700;
 }
 
 @media (max-width: 960px) {

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -23,6 +24,7 @@ from app.llm_service import (
     list_supported_models,
 )
 from app.models import ChatRecord, UserRole
+from app.models import Assignment
 from app.schemas import (
     AnswerSubmissionResponse,
     ChatCompletionRequest,
@@ -31,6 +33,12 @@ from app.schemas import (
     ChatConversationResponse,
     ChatModelInfo,
     ChatRecordResponse,
+    StudentAssessmentSummaryResponse,
+)
+from app.services.answer_assessment import (
+    AssessmentResourceError,
+    assess_answer_credibility,
+    build_student_assessment_summary,
 )
 
 router = APIRouter(prefix='/api/chat', tags=['chat'])
@@ -118,6 +126,42 @@ def get_conversation_answer_submission(
         conversation_id=conversation.id,
     )
     return AnswerSubmissionResponse.model_validate(submission) if submission is not None else None
+
+
+@router.get(
+    '/conversations/{conversation_id}/answer-submission/assessment',
+    response_model=StudentAssessmentSummaryResponse,
+)
+def get_conversation_answer_assessment(
+    conversation_id: int,
+    current_user=Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    conversation = _require_student_conversation(
+        db,
+        current_user=current_user,
+        conversation_id=conversation_id,
+    )
+    submission = get_answer_submission_by_conversation_id(
+        db,
+        user_id=current_user.id,
+        conversation_id=conversation.id,
+    )
+    if submission is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Answer submission not found')
+
+    try:
+        result = assess_answer_credibility(
+            answer_text=submission.answer_text,
+            question_text=_build_assignment_question_text(db, assignment_id=conversation.assignment_id),
+            ai_source='not_provided',
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except AssessmentResourceError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+
+    return StudentAssessmentSummaryResponse(**build_student_assessment_summary(result))
 
 
 @router.post('/conversations/{conversation_id}/answer-submission', response_model=AnswerSubmissionResponse)
@@ -257,6 +301,18 @@ def _build_history_messages(records: list[ChatRecord]) -> list[dict[str, str]]:
         if record.content.strip():
             messages.append({'role': 'assistant', 'content': record.content.strip()})
     return messages
+
+
+def _build_assignment_question_text(db: Session, *, assignment_id: int | None) -> str | None:
+    if assignment_id is None:
+        return None
+
+    assignment = db.scalar(select(Assignment).where(Assignment.id == assignment_id))
+    if assignment is None:
+        return None
+
+    parts = [assignment.title, assignment.description]
+    return '\n'.join(part.strip() for part in parts if part and part.strip()) or None
 
 
 async def _read_answer_file(answer_file: UploadFile | None) -> tuple[str, str | None]:
