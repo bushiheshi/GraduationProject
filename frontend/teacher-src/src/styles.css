@@ -328,9 +328,7 @@ h2,
 }
 
 .assessment-stat-card,
-.assessment-insight-card,
-.assessment-low-list,
-.assessment-low-item {
+.assessment-insight-card {
   border: 1px solid rgba(26, 37, 48, 0.07);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.88);
@@ -344,15 +342,12 @@ h2,
 
 .assessment-stat-card span,
 .assessment-stat-card small,
-.assessment-insight-card p,
-.assessment-low-item span,
-.assessment-low-item p {
+.assessment-insight-card p {
   color: var(--teacher-soft);
 }
 
 .assessment-stat-card span,
-.assessment-stat-card small,
-.assessment-low-item span {
+.assessment-stat-card small {
   font-size: 12px;
 }
 
@@ -367,8 +362,7 @@ h2,
   gap: 12px;
 }
 
-.assessment-insight-card,
-.assessment-low-list {
+.assessment-insight-card {
   display: grid;
   gap: 12px;
   padding: 16px;
@@ -402,24 +396,6 @@ h2,
   color: var(--teacher-accent-deep);
   font-size: 12px;
   font-weight: 700;
-}
-
-.assessment-low-item {
-  display: grid;
-  gap: 8px;
-  padding: 14px;
-}
-
-.assessment-low-item div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.assessment-low-item p {
-  margin: 0;
-  line-height: 1.7;
 }
 
 .keyword-board {
@@ -709,7 +685,7 @@ h2,
 
 .workspace-grid {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1.1fr) minmax(360px, 1fr);
+  grid-template-columns: minmax(320px, 0.95fr) minmax(420px, 1.25fr);
   gap: 18px;
   align-items: start;
 }
@@ -718,6 +694,10 @@ h2,
 .submission-card,
 .detail-card {
   padding: 24px;
+}
+
+.assignment-card-top {
+  order: -1;
 }
 
 .assignment-card,
@@ -758,6 +738,12 @@ h2,
 .assignment-list {
   max-height: 650px;
   overflow-y: auto;
+  padding-right: 4px;
+}
+
+.assignment-list-top {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  max-height: 270px;
   padding-right: 4px;
 }
 
@@ -1243,12 +1229,7 @@ h2,
 
 @media (max-width: 1440px) {
   .workspace-grid {
-    grid-template-columns: 320px minmax(0, 1fr);
-  }
-
-  .detail-card {
-    grid-column: 1 / -1;
-    min-height: 0;
+    grid-template-columns: minmax(300px, 0.95fr) minmax(380px, 1.25fr);
   }
 }
 

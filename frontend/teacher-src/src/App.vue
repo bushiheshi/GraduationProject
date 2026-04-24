@@ -587,6 +587,42 @@ function goLogin() {
     </aside>
 
     <main class="teacher-main">
+      <section class="panel assignment-card assignment-card-top">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">选择作业</p>
+            <h2>先选择一份作业查看统计</h2>
+          </div>
+          <span class="head-tag">{{ loadingAssignments ? '刷新中' : `${assignments.length} 份作业` }}</span>
+        </div>
+
+        <div v-if="!assignments.length" class="empty-state compact-empty">
+          <strong>还没有作业</strong>
+          <p>发布作业后，这里将开始展示提交情况和 AI 使用分析。</p>
+          <button class="primary-button" type="button" @click="openPublishModal">立即发布</button>
+        </div>
+
+        <div v-else class="assignment-list assignment-list-top">
+          <button
+            v-for="item in assignments"
+            :key="item.id"
+            type="button"
+            :class="['assignment-item', { active: item.id === selectedAssignmentId }]"
+            @click="selectAssignment(item.id)"
+          >
+            <div class="assignment-item-top">
+              <strong>{{ item.title }}</strong>
+              <span>{{ item.submitted_count }}/{{ item.student_count }}</span>
+            </div>
+            <p v-if="item.description">{{ item.description }}</p>
+            <div class="assignment-meta">
+              <span>发布时间 {{ formatTime(item.created_at) }}</span>
+              <span class="assignment-meta-pill">提交率 {{ item.student_count ? Math.round((item.submitted_count / item.student_count) * 100) : 0 }}%</span>
+            </div>
+          </button>
+        </div>
+      </section>
+
       <section class="panel spotlight-card">
         <div class="spotlight-copy">
           <p class="eyebrow">统计概览</p>
@@ -720,23 +756,6 @@ function goLogin() {
             </article>
           </div>
 
-          <div v-if="assessmentSummary.low_score_students.length" class="assessment-low-list">
-            <div class="assessment-card-head">
-              <strong>低分学生提示</strong>
-              <span>最多展示 5 人</span>
-            </div>
-            <article
-              v-for="item in assessmentSummary.low_score_students"
-              :key="item.student_id"
-              class="assessment-low-item"
-            >
-              <div>
-                <strong>{{ item.student_name }}</strong>
-                <span>{{ item.student_account }} · {{ item.score }} 分 · {{ item.label }}</span>
-              </div>
-              <p>{{ item.main_shortcomings[0] || '建议查看该学生完整报告。' }}</p>
-            </article>
-          </div>
         </div>
       </section>
 
@@ -932,42 +951,6 @@ function goLogin() {
       </section>
 
       <section class="workspace-grid">
-        <article class="panel assignment-card">
-          <div class="section-head">
-            <div>
-              <p class="eyebrow">作业列表</p>
-              <h2>按作业查看统计</h2>
-            </div>
-            <span class="head-tag">{{ loadingAssignments ? '刷新中' : `${assignments.length} 份作业` }}</span>
-          </div>
-
-          <div v-if="!assignments.length" class="empty-state compact-empty">
-            <strong>还没有作业</strong>
-            <p>发布作业后，这里将开始展示提交情况和 AI 使用分析。</p>
-            <button class="primary-button" type="button" @click="openPublishModal">立即发布</button>
-          </div>
-
-          <div v-else class="assignment-list">
-            <button
-              v-for="item in assignments"
-              :key="item.id"
-              type="button"
-              :class="['assignment-item', { active: item.id === selectedAssignmentId }]"
-              @click="selectAssignment(item.id)"
-            >
-              <div class="assignment-item-top">
-                <strong>{{ item.title }}</strong>
-                <span>{{ item.submitted_count }}/{{ item.student_count }}</span>
-              </div>
-              <p v-if="item.description">{{ item.description }}</p>
-              <div class="assignment-meta">
-                <span>发布时间 {{ formatTime(item.created_at) }}</span>
-                <span class="assignment-meta-pill">提交率 {{ item.student_count ? Math.round((item.submitted_count / item.student_count) * 100) : 0 }}%</span>
-              </div>
-            </button>
-          </div>
-        </article>
-
         <article class="panel submission-card">
           <div class="section-head">
             <div>
@@ -979,7 +962,7 @@ function goLogin() {
 
           <div v-if="!selectedAssignment" class="empty-state">
             <strong>尚未选择作业</strong>
-            <p>先在左侧选择作业，这里会显示学生提交列表和 AI 使用简况。</p>
+            <p>先在上方选择作业，这里会显示学生提交列表和 AI 使用简况。</p>
           </div>
 
           <div v-else-if="loadingSubmissions" class="empty-state">
