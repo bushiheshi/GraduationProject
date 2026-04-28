@@ -21,6 +21,7 @@ const loadingAssessmentSummary = ref(false);
 const loadingQuestionOverview = ref(false);
 const loadingKeywordDetail = ref(false);
 const publishing = ref(false);
+const assignmentPickerOpen = ref(false);
 const showPublishModal = ref(false);
 const showFilePreviewModal = ref(false);
 const showKeywordDetailModal = ref(false);
@@ -211,6 +212,14 @@ async function selectAssignment(assignmentId) {
     loadKeywordSummary(assignmentId),
     loadAssessmentSummary(assignmentId),
   ]);
+}
+
+function toggleAssignmentPicker() {
+  assignmentPickerOpen.value = !assignmentPickerOpen.value;
+}
+
+async function selectAssignmentFromPicker(assignmentId) {
+  await selectAssignment(assignmentId);
 }
 
 async function loadSubmissions(assignmentId, options = {}) {
@@ -566,15 +575,48 @@ function goLogin() {
       </section>
 
       <section class="sidebar-stats">
-        <article>
+        <button
+          class="sidebar-stat-card published-assignment-toggle"
+          type="button"
+          :aria-expanded="assignmentPickerOpen"
+          aria-controls="published-assignment-picker"
+          @click="toggleAssignmentPicker"
+        >
           <span>已发布作业</span>
           <strong>{{ totalAssignments }}</strong>
-        </article>
-        <article>
+          <small>{{ selectedAssignment ? selectedAssignment.title : '点击选择作业' }}</small>
+          <i aria-hidden="true">{{ assignmentPickerOpen ? '收起' : '展开' }}</i>
+        </button>
+
+        <div
+          v-if="assignmentPickerOpen"
+          id="published-assignment-picker"
+          class="sidebar-assignment-picker"
+        >
+          <div v-if="loadingAssignments" class="sidebar-assignment-empty">正在读取已发布作业...</div>
+          <div v-else-if="!assignments.length" class="sidebar-assignment-empty">
+            <strong>还没有作业</strong>
+            <span>发布作业后可在这里选择。</span>
+          </div>
+          <template v-else>
+            <button
+              v-for="item in assignments"
+              :key="item.id"
+              type="button"
+              :class="['sidebar-assignment-option', { active: item.id === selectedAssignmentId }]"
+              @click="selectAssignmentFromPicker(item.id)"
+            >
+              <strong>{{ item.title }}</strong>
+              <span>{{ item.submitted_count }}/{{ item.student_count }} 已提交</span>
+            </button>
+          </template>
+        </div>
+
+        <article class="sidebar-stat-card">
           <span>累计提交</span>
           <strong>{{ totalSubmissions }}</strong>
         </article>
-        <article>
+        <article class="sidebar-stat-card">
           <span>累计下发</span>
           <strong>{{ totalDistributedCount }}</strong>
         </article>
@@ -587,42 +629,6 @@ function goLogin() {
     </aside>
 
     <main class="teacher-main">
-      <section class="panel assignment-card assignment-card-top">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">选择作业</p>
-            <h2>先选择一份作业查看统计</h2>
-          </div>
-          <span class="head-tag">{{ loadingAssignments ? '刷新中' : `${assignments.length} 份作业` }}</span>
-        </div>
-
-        <div v-if="!assignments.length" class="empty-state compact-empty">
-          <strong>还没有作业</strong>
-          <p>发布作业后，这里将开始展示提交情况和 AI 使用分析。</p>
-          <button class="primary-button" type="button" @click="openPublishModal">立即发布</button>
-        </div>
-
-        <div v-else class="assignment-list assignment-list-top">
-          <button
-            v-for="item in assignments"
-            :key="item.id"
-            type="button"
-            :class="['assignment-item', { active: item.id === selectedAssignmentId }]"
-            @click="selectAssignment(item.id)"
-          >
-            <div class="assignment-item-top">
-              <strong>{{ item.title }}</strong>
-              <span>{{ item.submitted_count }}/{{ item.student_count }}</span>
-            </div>
-            <p v-if="item.description">{{ item.description }}</p>
-            <div class="assignment-meta">
-              <span>发布时间 {{ formatTime(item.created_at) }}</span>
-              <span class="assignment-meta-pill">提交率 {{ item.student_count ? Math.round((item.submitted_count / item.student_count) * 100) : 0 }}%</span>
-            </div>
-          </button>
-        </div>
-      </section>
-
       <section class="panel spotlight-card">
         <div class="spotlight-copy">
           <p class="eyebrow">统计概览</p>
@@ -962,7 +968,7 @@ function goLogin() {
 
           <div v-if="!selectedAssignment" class="empty-state">
             <strong>尚未选择作业</strong>
-            <p>先在上方选择作业，这里会显示学生提交列表和 AI 使用简况。</p>
+            <p>先在左侧点击已发布作业，并选择对应作业，这里会显示学生提交列表和 AI 使用简况。</p>
           </div>
 
           <div v-else-if="loadingSubmissions" class="empty-state">

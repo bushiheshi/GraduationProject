@@ -2396,3 +2396,257 @@ h2,
     height: min(62vh, 560px);
   }
 }
+
+/* Sidebar assignment picker */
+.sidebar-stats {
+  align-items: stretch;
+}
+
+.sidebar-stat-card,
+.sidebar-stats article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 10px;
+  width: 100%;
+  min-height: 68px;
+  padding: 12px;
+  border: 1px solid rgba(29, 29, 31, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.84);
+  color: var(--teacher-text);
+  text-align: left;
+}
+
+.published-assignment-toggle {
+  position: relative;
+  min-height: 78px;
+  border-color: rgba(29, 29, 31, 0.18);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(237, 240, 244, 0.9)),
+    linear-gradient(122deg, rgba(198, 220, 238, 0.44), rgba(239, 222, 192, 0.36));
+  box-shadow: 0 12px 24px rgba(29, 29, 31, 0.08);
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 120ms ease;
+}
+
+.published-assignment-toggle::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 999px;
+  background: #1d1d1f;
+}
+
+.published-assignment-toggle span,
+.published-assignment-toggle small {
+  padding-left: 10px;
+}
+
+.published-assignment-toggle:hover {
+  border-color: rgba(29, 29, 31, 0.18);
+  background: #ffffff;
+  box-shadow: 0 12px 24px rgba(29, 29, 31, 0.08);
+  transform: translateY(-1px);
+}
+
+.sidebar-stat-card span,
+.sidebar-stats article span {
+  color: var(--teacher-soft);
+  font-size: 13px;
+}
+
+.sidebar-stat-card strong,
+.sidebar-stats article strong {
+  justify-self: end;
+  margin: 0;
+  color: var(--teacher-text);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.sidebar-stat-card small {
+  grid-column: 1 / 2;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--teacher-soft-2);
+  font-size: 12px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-stat-card i {
+  justify-self: end;
+  align-self: end;
+  min-width: 38px;
+  min-height: 24px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #1d1d1f;
+  color: #ffffff;
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1;
+  text-align: center;
+}
+
+.sidebar-assignment-picker {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  max-height: 320px;
+  margin: -2px 0 4px 12px;
+  padding: 10px 8px 10px 14px;
+  overflow-y: auto;
+  border: 1px solid rgba(29, 29, 31, 0.08);
+  border-left: 2px solid rgba(29, 29, 31, 0.22);
+  border-radius: 8px;
+  background: rgba(237, 240, 244, 0.7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  backdrop-filter: saturate(160%) blur(18px);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(29, 29, 31, 0.28) transparent;
+}
+
+.sidebar-assignment-picker::before {
+  content: "选择试卷";
+  display: block;
+  margin: 0 0 2px;
+  color: var(--teacher-soft);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.sidebar-assignment-option {
+  position: relative;
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid rgba(29, 29, 31, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--teacher-text);
+  text-align: left;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.sidebar-assignment-option:hover {
+  border-color: rgba(29, 29, 31, 0.18);
+  background: #ffffff;
+}
+
+.sidebar-assignment-option.active {
+  border-color: rgba(29, 29, 31, 0.24);
+  background: #ffffff;
+  box-shadow: inset 4px 0 0 #1d1d1f, 0 10px 20px rgba(29, 29, 31, 0.08);
+}
+
+.sidebar-assignment-option strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--teacher-text);
+  font-size: 14px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-assignment-option span {
+  color: var(--teacher-soft);
+  font-size: 12px;
+}
+
+.sidebar-assignment-empty {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(237, 240, 244, 0.78);
+  color: var(--teacher-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.sidebar-assignment-empty strong {
+  color: var(--teacher-text);
+}
+
+/* Teacher typography refinement */
+body.teacher-app-body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", "Microsoft YaHei UI",
+    "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+}
+
+.brand-copy strong,
+.identity-card h2,
+.spotlight-card h1,
+.section-head h2,
+.summary-card strong {
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.sidebar-stat-card,
+.sidebar-stats article,
+.sidebar-assignment-picker,
+.sidebar-assignment-option {
+  font-family: inherit;
+}
+
+.published-assignment-toggle span {
+  color: #343940;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.published-assignment-toggle strong {
+  font-size: 30px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.published-assignment-toggle small {
+  color: #6e6e73;
+  font-size: 12.5px;
+  font-weight: 400;
+}
+
+.sidebar-stat-card i {
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.sidebar-stats article span {
+  font-weight: 500;
+}
+
+.sidebar-stats article strong {
+  font-size: 25px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.sidebar-assignment-picker::before {
+  color: #515154;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.sidebar-assignment-option strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.sidebar-assignment-option span {
+  color: #6e6e73;
+  font-size: 12px;
+  font-weight: 400;
+}
