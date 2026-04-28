@@ -68,8 +68,8 @@ createApp({
   data() {
     return {
       role: 'student',
-      account: 'student001',
-      password: '123456',
+      account: '',
+      password: '',
       loading: false,
       message: '',
       messageType: '',
@@ -86,8 +86,8 @@ createApp({
       const me = await this.fetchMe(token);
       this.sessionUser = me;
       this.role = me.role;
-      this.account = me.account;
-      this.password = '123456';
+      this.account = '';
+      this.password = '';
       this.message =
         me.role === 'teacher'
           ? '检测到教师已登录，可直接进入教师页。'
@@ -100,10 +100,6 @@ createApp({
   methods: {
     setRole(nextRole) {
       this.role = nextRole;
-      if (!this.sessionUser || this.sessionUser.role !== nextRole) {
-        this.account = nextRole === 'student' ? 'student001' : 'teacher001';
-        this.password = '123456';
-      }
     },
 
     async submitLogin() {
@@ -130,7 +126,7 @@ createApp({
         const me = await this.fetchMe(loginData.access_token);
         this.sessionUser = me;
         this.role = me.role;
-        this.account = me.account;
+        this.password = '';
 
         this.message = me.role === 'teacher' ? '登录成功，正在进入教师页...' : '登录成功，正在进入学生页...';
         this.messageType = 'success';

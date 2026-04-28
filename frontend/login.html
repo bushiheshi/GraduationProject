@@ -5,27 +5,35 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>登录 - AIGC 教学平台</title>
-    <link rel="stylesheet" href="/frontend/styles.css" />
+    <link rel="stylesheet" href="/frontend/styles.css?v=20260428-bg-balanced" />
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   </head>
-  <body>
-    <div class="ambient ambient-left"></div>
-    <div class="ambient ambient-right"></div>
+  <body class="auth-page">
+    <header class="auth-globalnav" aria-label="全局导航">
+      <div class="auth-globalnav-inner">
+        <a class="auth-brand" href="/" aria-label="AIGC Classroom 首页">
+          <span class="auth-brand-mark">AI</span>
+          <span>AIGC Classroom</span>
+        </a>
+        <span class="auth-nav-title">教学 AI 账号</span>
+      </div>
+    </header>
 
     <main id="app" class="container auth-shell">
-      <section class="card auth-card">
-        <p class="eyebrow">AIGC Classroom</p>
-        <h1>教学 AI 平台登录</h1>
-        <p class="desc">学生登录后进入对话空间，教师登录后进入作业发布页。</p>
+      <section class="auth-card" aria-labelledby="auth-title">
+        <div class="auth-mark" aria-hidden="true">AI</div>
+        <p class="eyebrow">AIGC Account</p>
+        <h1 id="auth-title">登录 AIGC 账号</h1>
+        <p class="desc">使用学校分配的账号登录学生端或教师端。</p>
 
         <role-switch :role="role" @update:role="setRole"></role-switch>
 
         <form class="form" @submit.prevent="submitLogin">
           <label>账号</label>
-          <input v-model.trim="account" minlength="3" maxlength="64" required placeholder="请输入账号" />
+          <input v-model.trim="account" minlength="3" maxlength="64" autocomplete="username" required placeholder="请输入账号" />
 
           <label>密码</label>
-          <input v-model="password" type="password" minlength="6" maxlength="128" required placeholder="请输入密码" />
+          <input v-model="password" type="password" minlength="6" maxlength="128" autocomplete="current-password" required placeholder="请输入密码" />
 
           <button class="primary" type="submit" :disabled="loading">{{ loading ? '登录中...' : '登录并进入' }}</button>
         </form>
@@ -40,22 +48,13 @@
           @logout="logout"
         ></session-card>
       </section>
-
-      <section class="card auth-aside">
-        <h2>使用说明</h2>
-        <ul class="feature-list">
-          <li>访问根路径 `http://127.0.0.1:18080/` 会固定进入登录页。</li>
-          <li>学生登录后跳转学生会话页，可在教师下发的作业对话内继续使用 AI 并提交答案。</li>
-          <li>教师登录后跳转教师页，可发布作业并查看学生提交状态。</li>
-        </ul>
-        <div class="hint-box">
-          <p>演示账号建议</p>
-          <strong>student001 / teacher001</strong>
-          <span>默认密码：123456</span>
-        </div>
-      </section>
     </main>
 
-    <script src="/frontend/login.js"></script>
+    <footer class="auth-footer" aria-label="页面信息">
+      <span>Copyright © 2026 AIGC Classroom. All rights reserved.</span>
+      <span>学校账号登录服务</span>
+    </footer>
+
+    <script src="/frontend/login.js?v=20260428-no-defaults"></script>
   </body>
 </html>

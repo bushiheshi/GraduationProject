@@ -5,7 +5,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>学生对话 - AIGC 教学平台</title>
-    <link rel="stylesheet" href="/frontend/styles.css" />
+    <link rel="stylesheet" href="/frontend/styles.css?v=20260428-unified-workspace" />
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
@@ -79,6 +79,24 @@
           </div>
         </header>
 
+        <section class="workspace-status-grid" aria-label="学习状态">
+          <div class="workspace-status-card is-accent">
+            <span>上下文轮次</span>
+            <strong>{{ activeConversation ? `${records.length}/5` : '0/5' }}</strong>
+            <small>{{ activeConversation ? '当前对话' : '未选择对话' }}</small>
+          </div>
+          <div class="workspace-status-card">
+            <span>历史对话</span>
+            <strong>{{ conversations.length }}</strong>
+            <small>条记录</small>
+          </div>
+          <div class="workspace-status-card">
+            <span>答案状态</span>
+            <strong>{{ conversationSubmission ? '已提交' : '待提交' }}</strong>
+            <small>{{ conversationSubmission ? formatShortTime(conversationSubmission.updated_at) : '当前对话' }}</small>
+          </div>
+        </section>
+
         <section
           v-if="activeConversation && activeConversation.assignment_description"
           class="assignment-brief-card"
@@ -90,11 +108,16 @@
         <section class="workspace-thread-shell">
           <div class="thread-scroll workspace-thread-scroll" ref="threadScroll" @click="handleMarkdownClick">
             <div v-if="!activeConversationId" class="thread-empty workspace-thread-empty">
+              <div class="thread-empty-mark">AI</div>
               <h3>从左侧开始一条新对话</h3>
               <p>历史记录固定在左侧，切换任意条目后即可继续上下文。</p>
+              <button class="primary thread-empty-action" type="button" :disabled="creatingConversation" @click="createConversation">
+                {{ creatingConversation ? '创建中...' : '新对话' }}
+              </button>
             </div>
 
             <div v-else-if="records.length === 0" class="thread-empty workspace-thread-empty">
+              <div class="thread-empty-mark">AI</div>
               <h3>这条对话还没有消息</h3>
               <p>在下方输入问题后，会把这次提问作为连续对话的起点。</p>
             </div>

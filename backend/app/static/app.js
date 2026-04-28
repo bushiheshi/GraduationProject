@@ -60,13 +60,6 @@
       tab.classList.toggle('active', tab.dataset.role === nextRole);
     });
 
-    if (!accountInput.value) {
-      accountInput.value = nextRole === 'student' ? 'student001' : 'teacher001';
-    }
-
-    if (!passwordInput.value) {
-      passwordInput.value = '123456';
-    }
   }
 
   function setUserView(user, token) {
