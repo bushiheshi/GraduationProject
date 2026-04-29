@@ -863,33 +863,12 @@ function goLogin() {
             <div class="progress-bar" :style="{ width: `${selectedCompletionRate}%` }"></div>
           </div>
           <div class="progress-meta">
+            <span>学生 {{ selectedStudentCount }}</span>
             <span>已提交 {{ selectedSubmittedCount }}</span>
             <span>未提交 {{ selectedPendingCount }}</span>
+            <span>附件 {{ selectedWithFileCount }}</span>
           </div>
         </div>
-      </section>
-
-      <section class="summary-grid">
-        <article class="panel summary-card accent-card">
-          <span>当前作业学生数</span>
-          <strong>{{ selectedStudentCount }}</strong>
-          <small>按当前选中作业统计</small>
-        </article>
-        <article class="panel summary-card mint-card">
-          <span>当前已提交</span>
-          <strong>{{ selectedSubmittedCount }}</strong>
-          <small>点击学生查看详细分析</small>
-        </article>
-        <article class="panel summary-card sky-card">
-          <span>TXT 提交数</span>
-          <strong>{{ selectedWithFileCount }}</strong>
-          <small>支持预览和下载</small>
-        </article>
-        <article class="panel summary-card slate-card">
-          <span>提交列表条数</span>
-          <strong>{{ selectedAnsweredCount }}</strong>
-          <small>当前作业可见的提交记录</small>
-        </article>
       </section>
 
       <section :class="['panel assessment-board compact-panel', { 'is-collapsed': collapsedSections.assessment, 'is-drawer-open': activeDrawer === 'assessment' }]">

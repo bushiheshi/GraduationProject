@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --teacher-bg: #f2ede4;
   --teacher-bg-alt: #e6edf1;
   --teacher-panel: rgba(255, 255, 255, 0.82);
@@ -17,6 +17,8 @@
   --teacher-danger: #a33e31;
   --teacher-ok: #14805e;
   --teacher-shadow: 0 28px 68px rgba(24, 34, 45, 0.12);
+  --apple-text-font: 'SF Pro SC', 'SF Pro Text', 'SF Pro Icons', 'PingFang SC', 'Helvetica Neue', Helvetica, Arial, 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;
+  --apple-display-font: 'SF Pro SC', 'SF Pro Display', 'SF Pro Icons', 'PingFang SC', 'Helvetica Neue', Helvetica, Arial, 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;
 }
 
 * {
@@ -31,7 +33,7 @@ body,
 }
 
 body.teacher-app-body {
-  font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-family: var(--apple-text-font);
   color: var(--teacher-text);
   background:
     radial-gradient(900px 520px at -10% 0%, rgba(226, 164, 124, 0.36), transparent 55%),
@@ -105,7 +107,7 @@ h2,
 .sidebar-stats strong,
 .identity-card h2,
 .spotlight-progress strong {
-  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  font-family: var(--apple-display-font);
 }
 
 .brand-copy strong {
@@ -352,7 +354,7 @@ h2,
 }
 
 .assessment-stat-card strong {
-  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  font-family: var(--apple-display-font);
   font-size: 30px;
 }
 
@@ -440,7 +442,7 @@ h2,
 .keyword-detail-stat strong,
 .keyword-chip-head strong,
 .keyword-match-head strong {
-  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  font-family: var(--apple-display-font);
 }
 
 .keyword-overview-card strong,
@@ -558,7 +560,7 @@ h2,
 
 .overview-table-head h3 {
   margin: 6px 0 0;
-  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  font-family: var(--apple-display-font);
   font-size: 22px;
 }
 
@@ -1151,7 +1153,7 @@ h2,
 
 .publish-note-head h3 {
   margin: 6px 0 0;
-  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  font-family: var(--apple-display-font);
   font-size: 22px;
   line-height: 1.2;
 }
@@ -1403,7 +1405,7 @@ h2,
 .usage-stage-card strong,
 .usage-empty strong {
   font-size: 20px;
-  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  font-family: var(--apple-display-font);
 }
 
 .usage-tags {
@@ -1557,7 +1559,7 @@ h2,
 
 .assessment-metric-card strong {
   font-size: 18px;
-  font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  font-family: var(--apple-display-font);
 }
 
 .assessment-evidence {
@@ -2153,8 +2155,7 @@ body.teacher-app-body {
   isolation: isolate;
   overflow-x: hidden;
   color: var(--teacher-text);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", "PingFang SC",
-    "Microsoft YaHei", sans-serif;
+  font-family: var(--apple-text-font);
   letter-spacing: 0;
   background:
     linear-gradient(180deg, rgba(246, 248, 251, 0.78) 0%, rgba(231, 235, 241, 0.66) 48%, #e7eaef 100%),
@@ -2578,8 +2579,7 @@ h2,
 
 /* Teacher typography refinement */
 body.teacher-app-body {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", "Microsoft YaHei UI",
-    "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: var(--apple-text-font);
   font-size: 14px;
 }
 
@@ -3190,3 +3190,206 @@ body.teacher-app-body {
     font-size: 18px;
   }
 }
+
+/* Roomier drawer-first teacher main view */
+.teacher-shell {
+  grid-template-columns: 304px minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px;
+}
+
+.teacher-sidebar,
+.teacher-main {
+  height: calc(100dvh - 32px);
+}
+
+.teacher-main {
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 14px;
+}
+
+.spotlight-card {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 270px);
+  min-height: 148px;
+  padding: 22px 24px;
+}
+
+.spotlight-card h1 {
+  margin: 6px 0 10px;
+  font-size: clamp(26px, 2.1vw, 34px);
+}
+
+.spotlight-description {
+  display: -webkit-box;
+  max-width: 900px;
+  max-height: none;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.spotlight-progress {
+  align-content: center;
+  padding: 18px;
+}
+
+.progress-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.progress-meta span {
+  justify-content: center;
+  min-height: 28px;
+}
+
+.assessment-board,
+.overview-board,
+.keyword-board {
+  display: flex;
+  flex-direction: column;
+  min-height: 128px;
+  max-height: none;
+  padding: 16px;
+}
+
+.compact-panel:not(.is-drawer-open) .collapsible-section-body {
+  display: none;
+}
+
+.compact-panel.is-collapsed {
+  min-height: 128px;
+}
+
+.compact-panel .section-head {
+  align-items: flex-start;
+  min-height: auto;
+}
+
+.compact-panel .section-head h2 {
+  -webkit-line-clamp: 2;
+  font-size: 17px;
+  line-height: 1.3;
+}
+
+.compact-panel:not(.is-drawer-open) .compact-panel-summary {
+  margin-top: auto;
+  padding-top: 12px;
+}
+
+.workspace-grid {
+  min-height: 0;
+}
+
+.submission-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 18px;
+}
+
+.submission-card .section-head {
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.submission-filter-tabs {
+  margin: 0 0 12px;
+}
+
+.submission-list {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  align-content: start;
+  gap: 12px;
+}
+
+.submission-item {
+  align-content: start;
+  gap: 10px;
+  min-height: 152px;
+  padding: 14px;
+}
+
+.submission-preview,
+.submission-ai-brief {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.submission-card > .empty-state {
+  flex: 1 1 auto;
+  min-height: 280px;
+}
+
+@media (max-width: 1440px) and (min-width: 1201px) {
+  .submission-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-height: 760px) and (min-width: 1201px) {
+  .spotlight-card {
+    min-height: 126px;
+    padding: 18px 20px;
+  }
+
+  .spotlight-card h1 {
+    font-size: 24px;
+  }
+
+  .assessment-board,
+  .overview-board,
+  .keyword-board,
+  .compact-panel.is-collapsed {
+    min-height: 112px;
+  }
+
+  .submission-item {
+    min-height: 132px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .teacher-shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .teacher-sidebar,
+  .teacher-main {
+    height: auto;
+    overflow: visible;
+  }
+
+  .teacher-main {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  .spotlight-card {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .assessment-board,
+  .overview-board,
+  .keyword-board,
+  .workspace-grid {
+    grid-column: 1;
+  }
+
+  .submission-list {
+    grid-template-columns: 1fr;
+    max-height: none;
+    overflow: visible;
+  }
+}
+
