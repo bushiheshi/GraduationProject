@@ -2639,6 +2639,58 @@ body.teacher-app-body {
   letter-spacing: 0;
 }
 
+.assignment-picker-tools {
+  display: grid;
+  gap: 8px;
+}
+
+.assignment-picker-tools input {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid rgba(29, 29, 31, 0.1);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--teacher-text);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+}
+
+.assignment-picker-tools input:focus {
+  border-color: #1d1d1f;
+  box-shadow: 0 0 0 3px rgba(29, 29, 31, 0.08);
+}
+
+.assignment-filter-tabs,
+.submission-filter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 64px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(29, 29, 31, 0.22) transparent;
+}
+
+.assignment-filter-tabs button,
+.submission-filter-tabs button {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #e8e8ed;
+  color: #515154;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.assignment-filter-tabs button.active,
+.submission-filter-tabs button.active {
+  background: #1d1d1f;
+  color: #ffffff;
+}
+
 .sidebar-assignment-option strong {
   font-size: 13.5px;
   font-weight: 600;
@@ -2649,4 +2701,492 @@ body.teacher-app-body {
   color: #6e6e73;
   font-size: 12px;
   font-weight: 400;
+}
+
+.current-assignment-strip {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: 100%;
+  margin: 0 0 7px;
+  padding: 6px 8px;
+  border: 1px solid rgba(29, 29, 31, 0.1);
+  border-radius: 8px;
+  background: rgba(237, 240, 244, 0.72);
+  color: #515154;
+  font-size: 12px;
+}
+
+.current-assignment-strip strong {
+  color: #1d1d1f;
+  font-weight: 650;
+}
+
+.current-assignment-strip small {
+  color: #6e6e73;
+}
+
+.compact-panel-summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.compact-panel-summary span {
+  max-width: 100%;
+  overflow: hidden;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #edf0f4;
+  color: #515154;
+  font-size: 12px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collapse-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.collapse-button b {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.submission-filter-tabs {
+  margin: -2px 0 10px;
+}
+
+/* One-screen teacher dashboard layout */
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body.teacher-app-body {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.teacher-shell {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.teacher-sidebar {
+  height: calc(100dvh - 28px);
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(29, 29, 31, 0.28) transparent;
+}
+
+.teacher-main {
+  height: calc(100dvh - 28px);
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  align-content: stretch;
+  gap: 10px;
+}
+
+.spotlight-card,
+.summary-grid,
+.workspace-grid {
+  grid-column: 1 / -1;
+}
+
+.assessment-board,
+.overview-board,
+.keyword-board {
+  min-height: 0;
+  max-height: 220px;
+  overflow: hidden;
+  padding: 12px 14px;
+}
+
+.assessment-board {
+  grid-column: 1;
+}
+
+.overview-board {
+  grid-column: 2;
+}
+
+.keyword-board {
+  grid-column: 3;
+}
+
+.compact-panel.is-collapsed {
+  min-height: 72px;
+}
+
+.compact-panel .section-head {
+  align-items: center;
+  min-height: 48px;
+  margin-bottom: 0;
+}
+
+.compact-panel .section-head h2 {
+  display: -webkit-box;
+  margin-top: 4px;
+  overflow: hidden;
+  font-size: 16px;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.section-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.collapse-button {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #1d1d1f;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.collapse-button:hover {
+  background: #2c2c2e;
+}
+
+.collapsible-section-body {
+  max-height: 146px;
+  margin-top: 10px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(29, 29, 31, 0.28) transparent;
+}
+
+.collapsible-section-body .compact-empty {
+  min-height: 130px;
+}
+
+.collapsible-section-body .assessment-stat-grid,
+.collapsible-section-body .keyword-overview-grid,
+.collapsible-section-body .overview-stat-grid {
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+}
+
+.workspace-grid {
+  min-height: 0;
+  overflow: hidden;
+  grid-template-columns: minmax(280px, 0.84fr) minmax(0, 1.32fr);
+  gap: 10px;
+}
+
+.submission-card,
+.detail-card {
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+  padding: 14px;
+}
+
+.submission-card .section-head,
+.detail-card .section-head {
+  margin-bottom: 10px;
+}
+
+.submission-list,
+.detail-body {
+  max-height: none;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(29, 29, 31, 0.28) transparent;
+}
+
+.detail-body {
+  height: calc(100% - 64px);
+}
+
+.submission-list {
+  height: calc(100% - 112px);
+}
+
+.spotlight-card {
+  min-height: 104px;
+  padding: 14px 16px;
+}
+
+.spotlight-card h1 {
+  margin: 4px 0 6px;
+  font-size: clamp(22px, 1.8vw, 28px);
+}
+
+.spotlight-description {
+  max-height: 46px;
+}
+
+.spotlight-progress {
+  padding: 12px;
+}
+
+.spotlight-progress strong {
+  font-size: 34px;
+}
+
+.summary-grid {
+  gap: 10px;
+}
+
+.summary-card {
+  min-height: 64px;
+  padding: 11px 14px;
+}
+
+.summary-card strong {
+  font-size: 22px;
+}
+
+@media (max-height: 780px) and (min-width: 1201px) {
+  .teacher-shell {
+    padding: 10px;
+  }
+
+  .teacher-sidebar,
+  .teacher-main {
+    height: calc(100dvh - 20px);
+  }
+
+  .teacher-main {
+    gap: 8px;
+  }
+
+  .spotlight-card {
+    min-height: 92px;
+    padding: 12px 14px;
+  }
+
+  .spotlight-card h1 {
+    font-size: 22px;
+  }
+
+  .spotlight-description,
+  .toolbar-message-wrap {
+    display: none;
+  }
+
+  .summary-card {
+    min-height: 58px;
+    padding: 9px 12px;
+  }
+
+  .summary-card small {
+    display: none;
+  }
+
+  .compact-panel.is-collapsed {
+    min-height: 64px;
+  }
+
+  .compact-panel .section-head {
+    min-height: 40px;
+  }
+
+  .compact-panel .section-head h2 {
+    font-size: 15px;
+  }
+
+  .compact-panel-summary {
+    margin-top: 5px;
+  }
+
+  .assessment-board,
+  .overview-board,
+  .keyword-board {
+    max-height: 198px;
+    padding: 10px 12px;
+  }
+
+  .collapsible-section-body {
+    max-height: 126px;
+  }
+
+  .submission-filter-tabs {
+    max-height: 58px;
+  }
+}
+
+@media (max-width: 1200px) {
+  body.teacher-app-body {
+    height: auto;
+    min-height: 100dvh;
+    overflow: auto;
+  }
+
+  .teacher-shell,
+  .teacher-sidebar,
+  .teacher-main {
+    height: auto;
+    overflow: visible;
+  }
+
+  .teacher-main {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .assessment-board,
+  .overview-board,
+  .keyword-board,
+  .workspace-grid {
+    grid-column: 1;
+  }
+
+  .workspace-grid,
+  .submission-card,
+  .detail-card {
+    overflow: visible;
+  }
+}
+
+/* Drawer details keep the main dashboard inside one viewport. */
+.workspace-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  border: 0;
+  background: rgba(16, 18, 22, 0.34);
+  backdrop-filter: blur(10px);
+  cursor: default;
+}
+
+.detail-card,
+.compact-panel.is-drawer-open {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  bottom: 14px;
+  left: auto;
+  z-index: 60;
+  width: min(760px, calc(100vw - 28px));
+  max-height: none;
+  min-height: 0;
+  overflow: hidden;
+  padding: 18px;
+  border-color: rgba(29, 29, 31, 0.12);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 247, 249, 0.94)),
+    radial-gradient(circle at top right, rgba(92, 108, 128, 0.12), transparent 34%);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(calc(100% + 28px));
+  transition: transform 220ms ease, opacity 180ms ease;
+}
+
+.detail-card.is-drawer-open,
+.compact-panel.is-drawer-open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.compact-panel.is-drawer-open {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.compact-panel.is-drawer-open .section-head,
+.detail-card.is-drawer-open .section-head {
+  align-items: flex-start;
+  min-height: auto;
+  margin-bottom: 8px;
+}
+
+.compact-panel.is-drawer-open .section-head h2,
+.detail-card.is-drawer-open .section-head h2 {
+  display: block;
+  overflow: visible;
+  font-size: 22px;
+  line-height: 1.3;
+  -webkit-line-clamp: unset;
+}
+
+.compact-panel.is-drawer-open .compact-panel-summary {
+  margin: 0;
+}
+
+.compact-panel.is-drawer-open .collapsible-section-body {
+  flex: 1;
+  max-height: none;
+  min-height: 0;
+  margin-top: 0;
+  overflow-y: auto;
+  padding: 2px 4px 4px 0;
+}
+
+.detail-card .detail-body {
+  height: calc(100% - 74px);
+}
+
+.detail-card .detail-empty {
+  min-height: calc(100% - 74px);
+}
+
+.drawer-close-button {
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #1d1d1f;
+  color: #ffffff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.drawer-close-button:hover {
+  background: #2c2c2e;
+}
+
+.detail-card:not(.is-drawer-open) {
+  visibility: hidden;
+}
+
+.modal-overlay {
+  z-index: 80;
+}
+
+@media (max-width: 760px) {
+  .detail-card,
+  .compact-panel.is-drawer-open {
+    top: 10px;
+    right: 10px;
+    bottom: 10px;
+    width: calc(100vw - 20px);
+    padding: 14px;
+  }
+
+  .compact-panel.is-drawer-open .section-head h2,
+  .detail-card.is-drawer-open .section-head h2 {
+    font-size: 18px;
+  }
 }

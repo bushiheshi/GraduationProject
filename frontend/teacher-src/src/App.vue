@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 
 const token = ref(localStorage.getItem('access_token') || '');
 const user = ref(null);
@@ -13,6 +13,9 @@ const isQuestionOverviewExpanded = ref(false);
 const selectedStudentId = ref(null);
 const selectedSubmissionDetail = ref(null);
 const selectedKeywordDetail = ref(null);
+const assignmentSearch = ref('');
+const assignmentFilter = ref('recent');
+const submissionFilter = ref('all');
 const loadingAssignments = ref(false);
 const loadingSubmissions = ref(false);
 const loadingSubmissionDetail = ref(false);
@@ -22,6 +25,17 @@ const loadingQuestionOverview = ref(false);
 const loadingKeywordDetail = ref(false);
 const publishing = ref(false);
 const assignmentPickerOpen = ref(false);
+const activeDrawer = ref(null);
+const collapsedSections = reactive({
+  assessment: true,
+  overview: true,
+  keywords: true,
+});
+const loadedSections = reactive({
+  assessment: false,
+  overview: false,
+  keywords: false,
+});
 const showPublishModal = ref(false);
 const showFilePreviewModal = ref(false);
 const showKeywordDetailModal = ref(false);
@@ -46,6 +60,27 @@ const selectedSubmissionSummary = computed(() => {
 
 const selectedAiUsage = computed(() => {
   return selectedSubmissionDetail.value?.ai_usage || null;
+});
+
+const filteredAssignments = computed(() => {
+  const query = assignmentSearch.value.trim().toLowerCase();
+  let list = [...assignments.value];
+
+  if (query) {
+    list = list.filter((item) => {
+      return `${item.title || ''} ${item.description || ''}`.toLowerCase().includes(query);
+    });
+  }
+
+  if (assignmentFilter.value === 'current') {
+    return selectedAssignment.value ? list.filter((item) => item.id === selectedAssignment.value.id) : [];
+  }
+
+  if (assignmentFilter.value === 'low') {
+    return list.sort((left, right) => getAssignmentRate(left) - getAssignmentRate(right));
+  }
+
+  return list.sort((left, right) => new Date(right.created_at || 0) - new Date(left.created_at || 0));
 });
 
 const totalAssignments = computed(() => assignments.value.length);
@@ -74,6 +109,7 @@ const selectedPassRate = computed(() => {
   return assessmentSummary.value ? `${assessmentSummary.value.pass_rate}%` : '-';
 });
 const keywordQuestionCount = computed(() => keywordSummary.value.reduce((sum, item) => sum + item.count, 0));
+const topKeywordLabels = computed(() => keywordSummary.value.slice(0, 3).map((item) => item.keyword));
 const keywordStudentCoverage = computed(() => {
   const total = keywordSummary.value.reduce((sum, item) => sum + item.student_count, 0);
   return keywordSummary.value.length ? Math.round(total / keywordSummary.value.length) : 0;
@@ -102,6 +138,77 @@ const overviewQuestionCount = computed(() => questionOverview.value?.total_quest
 const overviewStudentCount = computed(() => questionOverview.value?.student_count || 0);
 const overviewKeywordCount = computed(() => questionOverview.value?.keyword_count || 0);
 const overviewKeywordHits = computed(() => questionOverview.value?.total_keyword_hits || 0);
+const pendingSubmissionCount = computed(() => submissions.value.filter((item) => !item.has_submission).length);
+const noAiSubmissionCount = computed(() => submissions.value.filter((item) => !item.ai_usage_count).length);
+const heavyAiSubmissionCount = computed(() => submissions.value.filter((item) => item.ai_usage_count >= 8).length);
+const attentionSubmissionCount = computed(() => {
+  return submissions.value.filter((item) => !item.has_submission || !item.ai_usage_count || item.ai_usage_count >= 8).length;
+});
+const filteredSubmissions = computed(() => {
+  const filters = {
+    all: () => true,
+    pending: (item) => !item.has_submission,
+    submitted: (item) => item.has_submission,
+    file: (item) => Boolean(item.source_filename),
+    noAi: (item) => !item.ai_usage_count,
+    attention: (item) => !item.has_submission || !item.ai_usage_count || item.ai_usage_count >= 8,
+  };
+  const predicate = filters[submissionFilter.value] || filters.all;
+  return submissions.value.filter(predicate);
+});
+const assessmentCompactSummary = computed(() => {
+  if (!selectedAssignment.value) {
+    return ['待选择作业'];
+  }
+  if (loadingAssessmentSummary.value) {
+    return ['统计中'];
+  }
+  if (!loadedSections.assessment) {
+    return ['查看详情后加载评估'];
+  }
+  if (!assessmentSummary.value?.assessed_count) {
+    return ['暂无报告'];
+  }
+  return [
+    `平均 ${selectedAverageScore.value}`,
+    `达标 ${selectedPassRate.value}`,
+    `关注 ${assessmentSummary.value.at_risk_count}`,
+  ];
+});
+const overviewCompactSummary = computed(() => {
+  if (loadingQuestionOverview.value) {
+    return ['统计中'];
+  }
+  if (!loadedSections.overview) {
+    return ['查看详情后加载总体问题'];
+  }
+  if (!overviewQuestionCount.value) {
+    return ['暂无提问'];
+  }
+  return [
+    `${overviewQuestionCount.value} 次提问`,
+    `${overviewStudentCount.value} 名学生`,
+    `${overviewKeywordCount.value} 个关键词`,
+  ];
+});
+const keywordsCompactSummary = computed(() => {
+  if (!selectedAssignment.value) {
+    return ['待选择作业'];
+  }
+  if (loadingKeywordSummary.value) {
+    return ['统计中'];
+  }
+  if (!loadedSections.keywords) {
+    return ['查看详情后加载关键词'];
+  }
+  if (!keywordSummary.value.length) {
+    return ['暂无关键词'];
+  }
+  return [
+    `${keywordSummary.value.length} 个高频词`,
+    topKeywordLabels.value.join('、'),
+  ];
+});
 const currentMasteryLevel = computed(() => {
   if (!selectedAssignment.value) {
     return '待生成';
@@ -139,7 +246,7 @@ onMounted(async () => {
     }
 
     user.value = me;
-    await Promise.all([loadAssignments(), loadQuestionOverview()]);
+    await loadAssignments();
     startAutoRefresh();
     setMessage('教师工作台已支持查看每位学生的 AI 使用分析。', 'success');
   } catch (error) {
@@ -204,13 +311,18 @@ async function selectAssignment(assignmentId) {
   selectedSubmissionDetail.value = null;
   keywordSummary.value = [];
   assessmentSummary.value = null;
+  loadedSections.assessment = false;
+  loadedSections.keywords = false;
   selectedKeywordDetail.value = null;
   showKeywordDetailModal.value = false;
   showFilePreviewModal.value = false;
+  if (activeDrawer.value === 'submission') {
+    activeDrawer.value = null;
+  }
+  await loadSubmissions(assignmentId);
   await Promise.all([
-    loadSubmissions(assignmentId),
-    loadKeywordSummary(assignmentId),
-    loadAssessmentSummary(assignmentId),
+    !collapsedSections.assessment ? ensureSectionData('assessment') : Promise.resolve(),
+    !collapsedSections.keywords ? ensureSectionData('keywords') : Promise.resolve(),
   ]);
 }
 
@@ -220,6 +332,58 @@ function toggleAssignmentPicker() {
 
 async function selectAssignmentFromPicker(assignmentId) {
   await selectAssignment(assignmentId);
+}
+
+async function toggleCollapsedSection(sectionKey) {
+  collapsedSections[sectionKey] = !collapsedSections[sectionKey];
+  if (!collapsedSections[sectionKey]) {
+    await ensureSectionData(sectionKey);
+  }
+}
+
+async function openSectionDrawer(sectionKey) {
+  if (!Object.prototype.hasOwnProperty.call(collapsedSections, sectionKey)) {
+    return;
+  }
+
+  activeDrawer.value = sectionKey;
+  collapsedSections[sectionKey] = false;
+  await ensureSectionData(sectionKey);
+}
+
+function openSubmissionDrawer(studentId) {
+  activeDrawer.value = 'submission';
+  selectSubmission(studentId);
+}
+
+function closeDrawer() {
+  if (activeDrawer.value && Object.prototype.hasOwnProperty.call(collapsedSections, activeDrawer.value)) {
+    collapsedSections[activeDrawer.value] = true;
+  }
+  activeDrawer.value = null;
+}
+
+async function ensureSectionData(sectionKey) {
+  if (sectionKey === 'overview' && !loadedSections.overview) {
+    await loadQuestionOverview();
+    return;
+  }
+
+  if (sectionKey === 'assessment' && selectedAssignmentId.value && !loadedSections.assessment) {
+    await loadAssessmentSummary(selectedAssignmentId.value);
+    return;
+  }
+
+  if (sectionKey === 'keywords' && selectedAssignmentId.value && !loadedSections.keywords) {
+    await loadKeywordSummary(selectedAssignmentId.value);
+  }
+}
+
+function getAssignmentRate(item) {
+  if (!item?.student_count) {
+    return 0;
+  }
+  return Math.round((item.submitted_count / item.student_count) * 100);
 }
 
 async function loadSubmissions(assignmentId, options = {}) {
@@ -260,6 +424,7 @@ async function loadSubmissions(assignmentId, options = {}) {
 async function loadKeywordSummary(assignmentId) {
   if (!assignmentId) {
     keywordSummary.value = [];
+    loadedSections.keywords = false;
     return;
   }
 
@@ -276,6 +441,7 @@ async function loadKeywordSummary(assignmentId) {
     keywordSummary.value = [];
     setMessage(error.message || '加载关键词统计失败。', 'error');
   } finally {
+    loadedSections.keywords = true;
     loadingKeywordSummary.value = false;
   }
 }
@@ -283,6 +449,7 @@ async function loadKeywordSummary(assignmentId) {
 async function loadAssessmentSummary(assignmentId) {
   if (!assignmentId) {
     assessmentSummary.value = null;
+    loadedSections.assessment = false;
     return;
   }
 
@@ -297,6 +464,7 @@ async function loadAssessmentSummary(assignmentId) {
     assessmentSummary.value = null;
     setMessage(error.message || '加载学生评估统计失败。', 'error');
   } finally {
+    loadedSections.assessment = true;
     loadingAssessmentSummary.value = false;
   }
 }
@@ -311,6 +479,7 @@ async function loadQuestionOverview() {
     isQuestionOverviewExpanded.value = false;
     setMessage(error.message || '加载总体问题统计失败。', 'error');
   } finally {
+    loadedSections.overview = true;
     loadingQuestionOverview.value = false;
   }
 }
@@ -338,7 +507,7 @@ async function refreshDashboard() {
   try {
     const [latestAssignments] = await Promise.all([
       request('/api/teacher/assignments'),
-      loadQuestionOverview(),
+      loadedSections.overview || !collapsedSections.overview ? loadQuestionOverview() : Promise.resolve(),
     ]);
 
     assignments.value = latestAssignments;
@@ -361,8 +530,8 @@ async function refreshDashboard() {
     selectedAssignmentId.value = currentAssignmentId;
     await Promise.all([
       loadSubmissions(currentAssignmentId, { preserveSelection: true, silent: true }),
-      loadKeywordSummary(currentAssignmentId),
-      loadAssessmentSummary(currentAssignmentId),
+      loadedSections.keywords || !collapsedSections.keywords ? loadKeywordSummary(currentAssignmentId) : Promise.resolve(),
+      loadedSections.assessment || !collapsedSections.assessment ? loadAssessmentSummary(currentAssignmentId) : Promise.resolve(),
     ]);
 
     if (currentStudentId) {
@@ -457,7 +626,10 @@ async function publishAssignment() {
     form.value.title = '';
     form.value.description = '';
     showPublishModal.value = false;
-    await Promise.all([loadAssignments(), loadQuestionOverview()]);
+    await Promise.all([
+      loadAssignments(),
+      loadedSections.overview ? loadQuestionOverview() : Promise.resolve(),
+    ]);
     setMessage(`作业已发布，已为 ${created.student_count} 名学生创建提交入口。`, 'success');
   } catch (error) {
     setMessage(error.message || '发布作业失败。', 'error');
@@ -599,15 +771,53 @@ function goLogin() {
             <span>发布作业后可在这里选择。</span>
           </div>
           <template v-else>
+            <div class="assignment-picker-tools">
+              <input
+                v-model.trim="assignmentSearch"
+                type="search"
+                placeholder="搜索作业"
+                aria-label="搜索已发布作业"
+              />
+              <div class="assignment-filter-tabs" aria-label="作业筛选">
+                <button
+                  type="button"
+                  :class="{ active: assignmentFilter === 'recent' }"
+                  @click="assignmentFilter = 'recent'"
+                >
+                  最近
+                </button>
+                <button
+                  type="button"
+                  :class="{ active: assignmentFilter === 'low' }"
+                  @click="assignmentFilter = 'low'"
+                >
+                  低提交
+                </button>
+                <button
+                  type="button"
+                  :class="{ active: assignmentFilter === 'current' }"
+                  @click="assignmentFilter = 'current'"
+                >
+                  已选
+                </button>
+              </div>
+            </div>
+
+            <div v-if="!filteredAssignments.length" class="sidebar-assignment-empty">
+              <strong>没有匹配作业</strong>
+              <span>换个关键词或筛选条件。</span>
+            </div>
+
             <button
-              v-for="item in assignments"
+              v-for="item in filteredAssignments"
+              v-else
               :key="item.id"
               type="button"
               :class="['sidebar-assignment-option', { active: item.id === selectedAssignmentId }]"
               @click="selectAssignmentFromPicker(item.id)"
             >
               <strong>{{ item.title }}</strong>
-              <span>{{ item.submitted_count }}/{{ item.student_count }} 已提交</span>
+              <span>{{ item.submitted_count }}/{{ item.student_count }} 已提交 · 提交率 {{ getAssignmentRate(item) }}%</span>
             </button>
           </template>
         </div>
@@ -633,6 +843,11 @@ function goLogin() {
         <div class="spotlight-copy">
           <p class="eyebrow">统计概览</p>
           <h1>{{ selectedAssignment ? selectedAssignment.title : '请先选择或发布一份作业' }}</h1>
+          <div v-if="selectedAssignment" class="current-assignment-strip">
+            <span>当前作业</span>
+            <strong>{{ selectedSubmittedCount }}/{{ selectedStudentCount }} 已提交</strong>
+            <small>{{ selectedCompletionRate }}% 完成</small>
+          </div>
           <p class="spotlight-description">
             {{ selectedAssignment?.description || '教师页现在可以查看每位学生的提交内容、AI 使用次数、模型分布、时间线和学习过程总结。' }}
           </p>
@@ -677,281 +892,326 @@ function goLogin() {
         </article>
       </section>
 
-      <section class="panel assessment-board">
+      <section :class="['panel assessment-board compact-panel', { 'is-collapsed': collapsedSections.assessment, 'is-drawer-open': activeDrawer === 'assessment' }]">
         <div class="section-head">
           <div>
             <p class="eyebrow">学生评估统计</p>
             <h2>{{ selectedAssignment ? '当前作业评估报告概览' : '请先选择一份作业' }}</h2>
           </div>
-          <span v-if="selectedAssignment" class="head-tag">
-            {{ loadingAssessmentSummary ? '统计中' : `${assessmentSummary?.assessed_count || 0} 份报告` }}
-          </span>
+          <div class="section-head-actions">
+            <span v-if="selectedAssignment" class="head-tag">
+              {{ loadingAssessmentSummary ? '统计中' : `${assessmentSummary?.assessed_count || 0} 份报告` }}
+            </span>
+            <button
+              class="collapse-button"
+              type="button"
+              @click="activeDrawer === 'assessment' ? closeDrawer() : openSectionDrawer('assessment')"
+            >
+              <span>{{ activeDrawer === 'assessment' ? '关闭' : '详情' }}</span>
+              <b aria-hidden="true">{{ activeDrawer === 'assessment' ? '×' : '›' }}</b>
+            </button>
+          </div>
+        </div>
+        <div class="compact-panel-summary">
+          <span v-for="item in assessmentCompactSummary" :key="item">{{ item }}</span>
         </div>
 
-        <div v-if="!selectedAssignment" class="empty-state compact-empty">
-          <strong>等待选择作业</strong>
-          <p>选中作业后，这里会统计学生提交评估报告的平均分、达标率和主要风险。</p>
-        </div>
-
-        <div v-else-if="loadingAssessmentSummary" class="empty-state compact-empty">
-          <strong>正在生成评估统计</strong>
-          <p>系统正在汇总当前作业已提交答案的评估报告。</p>
-        </div>
-
-        <div v-else-if="!assessmentSummary?.assessed_count" class="empty-state compact-empty">
-          <strong>暂无可统计报告</strong>
-          <p>学生提交答案后，这里会显示平均分、达标率和常见不足。</p>
-        </div>
-
-        <div v-else class="assessment-board-body">
-          <div class="assessment-stat-grid">
-            <article class="assessment-stat-card">
-              <span>平均分</span>
-              <strong>{{ selectedAverageScore }}</strong>
-              <small>已评估 {{ assessmentSummary.assessed_count }}/{{ assessmentSummary.submitted_count }} 份</small>
-            </article>
-            <article class="assessment-stat-card">
-              <span>达标率</span>
-              <strong>{{ selectedPassRate }}</strong>
-              <small>{{ assessmentSummary.pass_count }} 人达到 60 分以上</small>
-            </article>
-            <article class="assessment-stat-card">
-              <span>最低分</span>
-              <strong>{{ assessmentSummary.lowest_score }}</strong>
-              <small>最高分 {{ assessmentSummary.highest_score }}</small>
-            </article>
-            <article class="assessment-stat-card">
-              <span>需重点关注</span>
-              <strong>{{ assessmentSummary.at_risk_count }}</strong>
-              <small>低于 60 分或报告等级存疑</small>
-            </article>
+        <div v-if="!collapsedSections.assessment" class="collapsible-section-body">
+          <div v-if="!selectedAssignment" class="empty-state compact-empty">
+            <strong>等待选择作业</strong>
+            <p>选中作业后，这里会统计学生提交评估报告的平均分、达标率和主要风险。</p>
           </div>
 
-          <div class="assessment-insight-grid">
-            <article class="assessment-insight-card">
-              <div class="assessment-card-head">
-                <strong>等级分布</strong>
-                <span>{{ Object.keys(assessmentSummary.level_counts).length }} 类</span>
-              </div>
-              <div class="assessment-chip-list">
-                <span
-                  v-for="(count, label) in assessmentSummary.level_counts"
-                  :key="label"
-                  class="assessment-chip"
-                >
-                  {{ label }} · {{ count }}
-                </span>
-              </div>
-            </article>
-
-            <article class="assessment-insight-card">
-              <div class="assessment-card-head">
-                <strong>常见风险</strong>
-                <span>{{ assessmentSummary.risk_flag_counts.length }} 项</span>
-              </div>
-              <div v-if="assessmentSummary.risk_flag_counts.length" class="assessment-chip-list">
-                <span
-                  v-for="item in assessmentSummary.risk_flag_counts"
-                  :key="item.flag"
-                  class="assessment-chip"
-                >
-                  {{ item.flag }} · {{ item.count }}
-                </span>
-              </div>
-              <p v-else>暂无明显风险标签。</p>
-            </article>
+          <div v-else-if="loadingAssessmentSummary" class="empty-state compact-empty">
+            <strong>正在生成评估统计</strong>
+            <p>系统正在汇总当前作业已提交答案的评估报告。</p>
           </div>
 
+          <div v-else-if="!assessmentSummary?.assessed_count" class="empty-state compact-empty">
+            <strong>暂无可统计报告</strong>
+            <p>学生提交答案后，这里会显示平均分、达标率和常见不足。</p>
+          </div>
+
+          <div v-else class="assessment-board-body">
+            <div class="assessment-stat-grid">
+              <article class="assessment-stat-card">
+                <span>平均分</span>
+                <strong>{{ selectedAverageScore }}</strong>
+                <small>已评估 {{ assessmentSummary.assessed_count }}/{{ assessmentSummary.submitted_count }} 份</small>
+              </article>
+              <article class="assessment-stat-card">
+                <span>达标率</span>
+                <strong>{{ selectedPassRate }}</strong>
+                <small>{{ assessmentSummary.pass_count }} 人达到 60 分以上</small>
+              </article>
+              <article class="assessment-stat-card">
+                <span>最低分</span>
+                <strong>{{ assessmentSummary.lowest_score }}</strong>
+                <small>最高分 {{ assessmentSummary.highest_score }}</small>
+              </article>
+              <article class="assessment-stat-card">
+                <span>需重点关注</span>
+                <strong>{{ assessmentSummary.at_risk_count }}</strong>
+                <small>低于 60 分或报告等级存疑</small>
+              </article>
+            </div>
+
+            <div class="assessment-insight-grid">
+              <article class="assessment-insight-card">
+                <div class="assessment-card-head">
+                  <strong>等级分布</strong>
+                  <span>{{ Object.keys(assessmentSummary.level_counts).length }} 类</span>
+                </div>
+                <div class="assessment-chip-list">
+                  <span
+                    v-for="(count, label) in assessmentSummary.level_counts"
+                    :key="label"
+                    class="assessment-chip"
+                  >
+                    {{ label }} · {{ count }}
+                  </span>
+                </div>
+              </article>
+
+              <article class="assessment-insight-card">
+                <div class="assessment-card-head">
+                  <strong>常见风险</strong>
+                  <span>{{ assessmentSummary.risk_flag_counts.length }} 项</span>
+                </div>
+                <div v-if="assessmentSummary.risk_flag_counts.length" class="assessment-chip-list">
+                  <span
+                    v-for="item in assessmentSummary.risk_flag_counts"
+                    :key="item.flag"
+                    class="assessment-chip"
+                  >
+                    {{ item.flag }} · {{ item.count }}
+                  </span>
+                </div>
+                <p v-else>暂无明显风险标签。</p>
+              </article>
+            </div>
+
+          </div>
         </div>
       </section>
 
-      <section class="panel overview-board">
+      <section :class="['panel overview-board compact-panel', { 'is-collapsed': collapsedSections.overview, 'is-drawer-open': activeDrawer === 'overview' }]">
         <div class="section-head">
           <div>
             <p class="eyebrow">总体问题统计</p>
             <h2>全部作业里的学生提问</h2>
           </div>
-          <span class="head-tag">
-            {{ loadingQuestionOverview ? '统计中' : `${overviewQuestionCount} 次提问` }}
-          </span>
-        </div>
-
-        <div v-if="loadingQuestionOverview" class="empty-state compact-empty">
-          <strong>正在整理总体问题统计</strong>
-          <p>系统正在汇总全部作业下学生对话里的提问次数和关键词。</p>
-        </div>
-
-        <div v-else-if="!overviewQuestionCount" class="empty-state compact-empty">
-          <strong>还没有可统计的提问</strong>
-          <p>学生开始在作业对话里提问后，这里会展示整体提问次数、关键词次数和学生提问排行。</p>
-        </div>
-
-        <div v-else class="overview-board-body">
-          <div class="keyword-overview-grid overview-stat-grid">
-            <article class="keyword-overview-card">
-              <span>总体提问次数</span>
-              <strong>{{ overviewQuestionCount }}</strong>
-              <small>全部作业下的学生 AI 提问轮次</small>
-            </article>
-            <article class="keyword-overview-card">
-              <span>提问学生数</span>
-              <strong>{{ overviewStudentCount }}</strong>
-              <small>产生过提问记录的学生人数</small>
-            </article>
-            <article class="keyword-overview-card">
-              <span>关键词总数</span>
-              <strong>{{ overviewKeywordCount }}</strong>
-              <small>从学生问题中提取出的标签数量</small>
-            </article>
-            <article class="keyword-overview-card">
-              <span>关键词命中</span>
-              <strong>{{ overviewKeywordHits }}</strong>
-              <small>按每轮提问去重后的累计命中次数</small>
-            </article>
-          </div>
-
-          <div class="overview-table-grid">
-            <article class="overview-table-card">
-              <div class="overview-table-head">
-                <div>
-                  <p class="eyebrow">关键词次数</p>
-                  <h3>高频问题关键词</h3>
-                </div>
-                <span class="head-tag">{{ overviewKeywords.length }} 项</span>
-              </div>
-
-              <div class="overview-table-wrap">
-                <table class="overview-table">
-                  <thead>
-                    <tr>
-                      <th>关键词</th>
-                      <th>次数</th>
-                      <th>学生数</th>
-                      <th>样例</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="item in visibleOverviewKeywords" :key="item.keyword">
-                      <td><strong>{{ item.keyword }}</strong></td>
-                      <td>{{ item.count }}</td>
-                      <td>{{ item.student_count }}</td>
-                      <td>{{ item.sample_prompts?.[0] || '-' }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </article>
-
-            <article class="overview-table-card">
-              <div class="overview-table-head">
-                <div>
-                  <p class="eyebrow">学生问题次数</p>
-                  <h3>提问学生排行</h3>
-                </div>
-                <span class="head-tag">{{ overviewStudents.length }} 名</span>
-              </div>
-
-              <div class="overview-table-wrap">
-                <table class="overview-table">
-                  <thead>
-                    <tr>
-                      <th>学生</th>
-                      <th>问题次数</th>
-                      <th>涉及作业</th>
-                      <th>最近提问</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="item in visibleOverviewStudents" :key="item.student_id">
-                      <td>
-                        <strong>{{ item.student_name }}</strong>
-                        <small>{{ item.student_account }}</small>
-                      </td>
-                      <td>{{ item.question_count }}</td>
-                      <td>{{ item.assignment_count }}</td>
-                      <td>{{ formatTime(item.last_asked_at) }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </article>
-          </div>
-
-          <div v-if="canToggleQuestionOverview" class="overview-toggle-row">
-            <button class="overview-toggle-button" type="button" @click="toggleQuestionOverview">
-              {{ isQuestionOverviewExpanded ? '收起总体问题统计' : '展开全部问题统计' }}
-            </button>
-            <span>
-              当前显示 {{ visibleOverviewKeywords.length }}/{{ overviewKeywords.length }} 个关键词，
-              {{ visibleOverviewStudents.length }}/{{ overviewStudents.length }} 名学生
+          <div class="section-head-actions">
+            <span class="head-tag">
+              {{ loadingQuestionOverview ? '统计中' : `${overviewQuestionCount} 次提问` }}
             </span>
+            <button
+              class="collapse-button"
+              type="button"
+              @click="activeDrawer === 'overview' ? closeDrawer() : openSectionDrawer('overview')"
+            >
+              <span>{{ activeDrawer === 'overview' ? '关闭' : '详情' }}</span>
+              <b aria-hidden="true">{{ activeDrawer === 'overview' ? '×' : '›' }}</b>
+            </button>
+          </div>
+        </div>
+        <div class="compact-panel-summary">
+          <span v-for="item in overviewCompactSummary" :key="item">{{ item }}</span>
+        </div>
+
+        <div v-if="!collapsedSections.overview" class="collapsible-section-body">
+          <div v-if="loadingQuestionOverview" class="empty-state compact-empty">
+            <strong>正在整理总体问题统计</strong>
+            <p>系统正在汇总全部作业下学生对话里的提问次数和关键词。</p>
+          </div>
+
+          <div v-else-if="!overviewQuestionCount" class="empty-state compact-empty">
+            <strong>还没有可统计的提问</strong>
+            <p>学生开始在作业对话里提问后，这里会展示整体提问次数、关键词次数和学生提问排行。</p>
+          </div>
+
+          <div v-else class="overview-board-body">
+            <div class="keyword-overview-grid overview-stat-grid">
+              <article class="keyword-overview-card">
+                <span>总体提问次数</span>
+                <strong>{{ overviewQuestionCount }}</strong>
+                <small>全部作业下的学生 AI 提问轮次</small>
+              </article>
+              <article class="keyword-overview-card">
+                <span>提问学生数</span>
+                <strong>{{ overviewStudentCount }}</strong>
+                <small>产生过提问记录的学生人数</small>
+              </article>
+              <article class="keyword-overview-card">
+                <span>关键词总数</span>
+                <strong>{{ overviewKeywordCount }}</strong>
+                <small>从学生问题中提取出的标签数量</small>
+              </article>
+              <article class="keyword-overview-card">
+                <span>关键词命中</span>
+                <strong>{{ overviewKeywordHits }}</strong>
+                <small>按每轮提问去重后的累计命中次数</small>
+              </article>
+            </div>
+
+            <div class="overview-table-grid">
+              <article class="overview-table-card">
+                <div class="overview-table-head">
+                  <div>
+                    <p class="eyebrow">关键词次数</p>
+                    <h3>高频问题关键词</h3>
+                  </div>
+                  <span class="head-tag">{{ overviewKeywords.length }} 项</span>
+                </div>
+
+                <div class="overview-table-wrap">
+                  <table class="overview-table">
+                    <thead>
+                      <tr>
+                        <th>关键词</th>
+                        <th>次数</th>
+                        <th>学生数</th>
+                        <th>样例</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="item in visibleOverviewKeywords" :key="item.keyword">
+                        <td><strong>{{ item.keyword }}</strong></td>
+                        <td>{{ item.count }}</td>
+                        <td>{{ item.student_count }}</td>
+                        <td>{{ item.sample_prompts?.[0] || '-' }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+
+              <article class="overview-table-card">
+                <div class="overview-table-head">
+                  <div>
+                    <p class="eyebrow">学生问题次数</p>
+                    <h3>提问学生排行</h3>
+                  </div>
+                  <span class="head-tag">{{ overviewStudents.length }} 名</span>
+                </div>
+
+                <div class="overview-table-wrap">
+                  <table class="overview-table">
+                    <thead>
+                      <tr>
+                        <th>学生</th>
+                        <th>问题次数</th>
+                        <th>涉及作业</th>
+                        <th>最近提问</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="item in visibleOverviewStudents" :key="item.student_id">
+                        <td>
+                          <strong>{{ item.student_name }}</strong>
+                          <small>{{ item.student_account }}</small>
+                        </td>
+                        <td>{{ item.question_count }}</td>
+                        <td>{{ item.assignment_count }}</td>
+                        <td>{{ formatTime(item.last_asked_at) }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+            </div>
+
+            <div v-if="canToggleQuestionOverview" class="overview-toggle-row">
+              <button class="overview-toggle-button" type="button" @click="toggleQuestionOverview">
+                {{ isQuestionOverviewExpanded ? '收起总体问题统计' : '展开全部问题统计' }}
+              </button>
+              <span>
+                当前显示 {{ visibleOverviewKeywords.length }}/{{ overviewKeywords.length }} 个关键词，
+                {{ visibleOverviewStudents.length }}/{{ overviewStudents.length }} 名学生
+              </span>
+            </div>
           </div>
         </div>
       </section>
 
-      <section class="panel keyword-board">
+      <section :class="['panel keyword-board compact-panel', { 'is-collapsed': collapsedSections.keywords, 'is-drawer-open': activeDrawer === 'keywords' }]">
         <div class="section-head">
           <div>
             <p class="eyebrow">问题关键词</p>
             <h2>{{ selectedAssignment ? '本次作业里学生最常问的问题' : '请先选择一份作业' }}</h2>
           </div>
-          <span v-if="selectedAssignment" class="head-tag">
-            {{ loadingKeywordSummary ? '统计中' : `${keywordSummary.length} 个高频词` }}
-          </span>
+          <div class="section-head-actions">
+            <span v-if="selectedAssignment" class="head-tag">
+              {{ loadingKeywordSummary ? '统计中' : `${keywordSummary.length} 个高频词` }}
+            </span>
+            <button
+              class="collapse-button"
+              type="button"
+              @click="activeDrawer === 'keywords' ? closeDrawer() : openSectionDrawer('keywords')"
+            >
+              <span>{{ activeDrawer === 'keywords' ? '关闭' : '详情' }}</span>
+              <b aria-hidden="true">{{ activeDrawer === 'keywords' ? '×' : '›' }}</b>
+            </button>
+          </div>
+        </div>
+        <div class="compact-panel-summary">
+          <span v-for="item in keywordsCompactSummary" :key="item">{{ item }}</span>
         </div>
 
-        <div v-if="!selectedAssignment" class="empty-state compact-empty">
-          <strong>先选择作业</strong>
-          <p>选中作业后，这里会统计学生提问里出现频率最高的关键词，并支持点开查看原始问答。</p>
-        </div>
-
-        <div v-else-if="loadingKeywordSummary" class="empty-state compact-empty">
-          <strong>正在统计关键词</strong>
-          <p>系统正在分析当前作业下全部学生提问的高频词。</p>
-        </div>
-
-        <div v-else-if="!keywordSummary.length" class="empty-state compact-empty">
-          <strong>还没有可统计的问题</strong>
-          <p>当前作业还没有足够的提问记录，学生开始对话后这里会自动出现关键词汇总。</p>
-        </div>
-
-        <div v-else class="keyword-board-body">
-          <div class="keyword-overview-grid">
-            <article class="keyword-overview-card">
-              <span>关键词总数</span>
-              <strong>{{ keywordSummary.length }}</strong>
-              <small>当前展示的高频问题标签</small>
-            </article>
-            <article class="keyword-overview-card">
-              <span>累计命中次数</span>
-              <strong>{{ keywordQuestionCount }}</strong>
-              <small>按提问轮次去重统计</small>
-            </article>
-            <article class="keyword-overview-card">
-              <span>平均涉及学生</span>
-              <strong>{{ keywordStudentCoverage }}</strong>
-              <small>每个关键词平均覆盖的学生人数</small>
-            </article>
+        <div v-if="!collapsedSections.keywords" class="collapsible-section-body">
+          <div v-if="!selectedAssignment" class="empty-state compact-empty">
+            <strong>先选择作业</strong>
+            <p>选中作业后，这里会统计学生提问里出现频率最高的关键词，并支持点开查看原始问答。</p>
           </div>
 
-          <div class="keyword-chip-grid">
-            <button
-              v-for="item in keywordSummary"
-              :key="item.keyword"
-              type="button"
-              class="keyword-chip-card"
-              @click="openKeywordDetail(item.keyword)"
-            >
-              <div class="keyword-chip-head">
-                <strong>{{ item.keyword }}</strong>
-                <span>{{ item.count }} 次</span>
-              </div>
-              <p>{{ item.student_count }} 名学生提到过</p>
-              <small v-if="item.sample_prompts.length">
-                {{ item.sample_prompts.join(' · ') }}
-              </small>
-              <small v-else>点击查看命中的原始提问与回答</small>
-            </button>
+          <div v-else-if="loadingKeywordSummary" class="empty-state compact-empty">
+            <strong>正在统计关键词</strong>
+            <p>系统正在分析当前作业下全部学生提问的高频词。</p>
+          </div>
+
+          <div v-else-if="!keywordSummary.length" class="empty-state compact-empty">
+            <strong>还没有可统计的问题</strong>
+            <p>当前作业还没有足够的提问记录，学生开始对话后这里会自动出现关键词汇总。</p>
+          </div>
+
+          <div v-else class="keyword-board-body">
+            <div class="keyword-overview-grid">
+              <article class="keyword-overview-card">
+                <span>关键词总数</span>
+                <strong>{{ keywordSummary.length }}</strong>
+                <small>当前展示的高频问题标签</small>
+              </article>
+              <article class="keyword-overview-card">
+                <span>累计命中次数</span>
+                <strong>{{ keywordQuestionCount }}</strong>
+                <small>按提问轮次去重统计</small>
+              </article>
+              <article class="keyword-overview-card">
+                <span>平均涉及学生</span>
+                <strong>{{ keywordStudentCoverage }}</strong>
+                <small>每个关键词平均覆盖的学生人数</small>
+              </article>
+            </div>
+
+            <div class="keyword-chip-grid">
+              <button
+                v-for="item in keywordSummary"
+                :key="item.keyword"
+                type="button"
+                class="keyword-chip-card"
+                @click="openKeywordDetail(item.keyword)"
+              >
+                <div class="keyword-chip-head">
+                  <strong>{{ item.keyword }}</strong>
+                  <span>{{ item.count }} 次</span>
+                </div>
+                <p>{{ item.student_count }} 名学生提到过</p>
+                <small v-if="item.sample_prompts.length">
+                  {{ item.sample_prompts.join(' · ') }}
+                </small>
+                <small v-else>点击查看命中的原始提问与回答</small>
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -965,10 +1225,30 @@ function goLogin() {
             </div>
             <span v-if="selectedAssignment" class="head-tag">{{ selectedSubmittedCount }}/{{ selectedStudentCount }} 已提交</span>
           </div>
+          <div v-if="selectedAssignment" class="submission-filter-tabs" aria-label="提交筛选">
+            <button type="button" :class="{ active: submissionFilter === 'all' }" @click="submissionFilter = 'all'">
+              全部 {{ submissions.length }}
+            </button>
+            <button type="button" :class="{ active: submissionFilter === 'pending' }" @click="submissionFilter = 'pending'">
+              未提交 {{ pendingSubmissionCount }}
+            </button>
+            <button type="button" :class="{ active: submissionFilter === 'submitted' }" @click="submissionFilter = 'submitted'">
+              已提交 {{ selectedAnsweredCount }}
+            </button>
+            <button type="button" :class="{ active: submissionFilter === 'file' }" @click="submissionFilter = 'file'">
+              附件 {{ selectedWithFileCount }}
+            </button>
+            <button type="button" :class="{ active: submissionFilter === 'noAi' }" @click="submissionFilter = 'noAi'">
+              无 AI {{ noAiSubmissionCount }}
+            </button>
+            <button type="button" :class="{ active: submissionFilter === 'attention' }" @click="submissionFilter = 'attention'">
+              需关注 {{ attentionSubmissionCount }}
+            </button>
+          </div>
 
           <div v-if="!selectedAssignment" class="empty-state">
             <strong>尚未选择作业</strong>
-            <p>先在左侧点击已发布作业，并选择对应作业，这里会显示学生提交列表和 AI 使用简况。</p>
+            <p>在左侧选择作业。</p>
           </div>
 
           <div v-else-if="loadingSubmissions" class="empty-state">
@@ -978,16 +1258,21 @@ function goLogin() {
 
           <div v-else-if="!submissions.length" class="empty-state">
             <strong>暂无学生记录</strong>
-            <p>当前作业暂时没有可供展示的学生提交信息。</p>
+            <p>暂无可展示学生。</p>
+          </div>
+
+          <div v-else-if="!filteredSubmissions.length" class="empty-state">
+            <strong>没有匹配学生</strong>
+            <p>切换筛选条件查看。</p>
           </div>
 
           <div v-else class="submission-list">
             <button
-              v-for="item in submissions"
+              v-for="item in filteredSubmissions"
               :key="item.student_id"
               type="button"
               :class="['submission-item', item.has_submission ? 'is-submitted' : 'is-pending', { active: item.student_id === selectedStudentId }]"
-              @click="selectSubmission(item.student_id)"
+              @click="openSubmissionDrawer(item.student_id)"
             >
               <div class="submission-header">
                 <div class="submission-copy">
@@ -1014,13 +1299,16 @@ function goLogin() {
           </div>
         </article>
 
-        <article class="panel detail-card">
+        <article :class="['panel detail-card', { 'is-drawer-open': activeDrawer === 'submission' }]">
           <div class="section-head">
             <div>
               <p class="eyebrow">提交详情</p>
               <h2>{{ selectedSubmissionSummary ? selectedSubmissionSummary.student_name : '请选择一个学生' }}</h2>
             </div>
-            <span v-if="selectedSubmissionSummary" class="head-tag">{{ selectedSubmissionSummary.has_submission ? '可查看全文' : '暂无提交' }}</span>
+            <div class="section-head-actions">
+              <span v-if="selectedSubmissionSummary" class="head-tag">{{ selectedSubmissionSummary.has_submission ? '可查看全文' : '暂无提交' }}</span>
+              <button class="drawer-close-button" type="button" @click="closeDrawer">关闭</button>
+            </div>
           </div>
 
           <div v-if="!selectedAssignment" class="empty-state detail-empty">
@@ -1206,6 +1494,14 @@ function goLogin() {
         </article>
       </section>
     </main>
+
+    <button
+      v-if="activeDrawer"
+      class="drawer-backdrop"
+      type="button"
+      aria-label="关闭详情面板"
+      @click="closeDrawer"
+    ></button>
 
     <div v-if="showPublishModal" class="modal-overlay" @click.self="closePublishModal">
       <div class="modal-card panel publish-modal">
