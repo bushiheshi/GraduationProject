@@ -3244,6 +3244,43 @@ body.teacher-app-body {
   min-height: 28px;
 }
 
+.dashboard-ai-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.dashboard-ai-strip article {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(29, 29, 31, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.dashboard-ai-strip span,
+.dashboard-ai-strip small {
+  overflow: hidden;
+  color: var(--teacher-soft);
+  font-size: 12px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-ai-strip strong {
+  overflow: hidden;
+  color: #1d1d1f;
+  font-size: 21px;
+  font-weight: 650;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .assessment-board,
 .overview-board,
 .keyword-board {
@@ -3286,6 +3323,7 @@ body.teacher-app-body {
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden;
   padding: 18px;
 }
 
@@ -3295,16 +3333,28 @@ body.teacher-app-body {
 }
 
 .submission-filter-tabs {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  max-height: none;
   margin: 0 0 12px;
+  padding-bottom: 2px;
+  overflow: visible;
+  background: transparent;
 }
 
 .submission-list {
   flex: 1 1 auto;
   height: auto;
   min-height: 0;
+  max-height: none;
+  overflow-y: auto;
   grid-template-columns: repeat(2, minmax(280px, 1fr));
   align-content: start;
   gap: 12px;
+  padding: 2px 4px 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(29, 29, 31, 0.28) transparent;
 }
 
 .submission-item {
@@ -3327,8 +3377,112 @@ body.teacher-app-body {
   min-height: 280px;
 }
 
+.assignment-overview-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  align-content: start;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(29, 29, 31, 0.28) transparent;
+}
+
+.assignment-overview-item {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-height: 142px;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid rgba(29, 29, 31, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.84);
+  color: var(--teacher-text);
+  text-align: left;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease, transform 120ms ease;
+}
+
+.assignment-overview-item:hover {
+  border-color: rgba(29, 29, 31, 0.18);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 12px 26px rgba(29, 29, 31, 0.08);
+  transform: translateY(-1px);
+}
+
+.assignment-overview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.assignment-overview-head strong,
+.assignment-overview-head span {
+  display: block;
+}
+
+.assignment-overview-head strong {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.assignment-overview-head span,
+.assignment-overview-meta span {
+  color: var(--teacher-soft);
+  font-size: 12px;
+}
+
+.assignment-overview-head span {
+  margin-top: 5px;
+}
+
+.assignment-overview-head em {
+  flex: 0 0 auto;
+  min-width: 54px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: #1d1d1f;
+  color: #ffffff;
+  font-size: 13px;
+  font-style: normal;
+  font-weight: 650;
+  line-height: 1;
+  text-align: center;
+}
+
+.assignment-overview-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8e8ed;
+}
+
+.assignment-overview-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #1d1d1f;
+}
+
+.assignment-overview-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 @media (max-width: 1440px) and (min-width: 1201px) {
-  .submission-list {
+  .submission-list,
+  .assignment-overview-list {
     grid-template-columns: 1fr;
   }
 }
@@ -3337,6 +3491,18 @@ body.teacher-app-body {
   .spotlight-card {
     min-height: 126px;
     padding: 18px 20px;
+  }
+
+  .dashboard-ai-strip {
+    margin-top: 10px;
+  }
+
+  .dashboard-ai-strip article {
+    padding: 8px 10px;
+  }
+
+  .dashboard-ai-strip strong {
+    font-size: 18px;
   }
 
   .spotlight-card h1 {
@@ -3352,6 +3518,10 @@ body.teacher-app-body {
 
   .submission-item {
     min-height: 132px;
+  }
+
+  .assignment-overview-item {
+    min-height: 126px;
   }
 }
 
@@ -3379,6 +3549,10 @@ body.teacher-app-body {
     min-height: auto;
   }
 
+  .dashboard-ai-strip {
+    grid-template-columns: 1fr;
+  }
+
   .assessment-board,
   .overview-board,
   .keyword-board,
@@ -3386,7 +3560,8 @@ body.teacher-app-body {
     grid-column: 1;
   }
 
-  .submission-list {
+  .submission-list,
+  .assignment-overview-list {
     grid-template-columns: 1fr;
     max-height: none;
     overflow: visible;

@@ -82,10 +82,20 @@ const filteredAssignments = computed(() => {
 
   return list.sort((left, right) => new Date(right.created_at || 0) - new Date(left.created_at || 0));
 });
+const assignmentOverviewItems = computed(() => {
+  return [...assignments.value].sort((left, right) => new Date(right.created_at || 0) - new Date(left.created_at || 0));
+});
 
 const totalAssignments = computed(() => assignments.value.length);
 const totalDistributedCount = computed(() => assignments.value.reduce((sum, item) => sum + item.student_count, 0));
 const totalSubmissions = computed(() => assignments.value.reduce((sum, item) => sum + item.submitted_count, 0));
+const totalPendingCount = computed(() => Math.max(totalDistributedCount.value - totalSubmissions.value, 0));
+const overallCompletionRate = computed(() => {
+  if (!totalDistributedCount.value) {
+    return 0;
+  }
+  return Math.round((totalSubmissions.value / totalDistributedCount.value) * 100);
+});
 const selectedStudentCount = computed(() => selectedAssignment.value?.student_count || 0);
 const selectedSubmittedCount = computed(() => selectedAssignment.value?.submitted_count || 0);
 const selectedPendingCount = computed(() => {
@@ -102,6 +112,18 @@ const selectedCompletionRate = computed(() => {
 });
 const selectedWithFileCount = computed(() => submissions.value.filter((item) => item.source_filename).length);
 const selectedAnsweredCount = computed(() => submissions.value.filter((item) => item.has_submission).length);
+const selectedAiUsageTotal = computed(() => {
+  return submissions.value.reduce((sum, item) => sum + (Number(item.ai_usage_count) || 0), 0);
+});
+const selectedAiUsageStudentCount = computed(() => {
+  return submissions.value.filter((item) => item.ai_usage_count > 0).length;
+});
+const dashboardStudentCount = computed(() => (selectedAssignment.value ? selectedStudentCount.value : totalDistributedCount.value));
+const dashboardSubmittedCount = computed(() => (selectedAssignment.value ? selectedSubmittedCount.value : totalSubmissions.value));
+const dashboardPendingCount = computed(() => (selectedAssignment.value ? selectedPendingCount.value : totalPendingCount.value));
+const dashboardCompletionRate = computed(() => (selectedAssignment.value ? selectedCompletionRate.value : overallCompletionRate.value));
+const dashboardExtraLabel = computed(() => (selectedAssignment.value ? '附件' : '作业'));
+const dashboardExtraCount = computed(() => (selectedAssignment.value ? selectedWithFileCount.value : totalAssignments.value));
 const selectedAverageScore = computed(() => {
   return assessmentSummary.value?.average_score ?? '-';
 });
@@ -155,6 +177,53 @@ const filteredSubmissions = computed(() => {
   };
   const predicate = filters[submissionFilter.value] || filters.all;
   return submissions.value.filter(predicate);
+});
+const dashboardAiInsightCards = computed(() => {
+  if (selectedAssignment.value) {
+    return [
+      {
+        label: 'AI 使用次数',
+        value: selectedAiUsageTotal.value,
+        hint: `${selectedAiUsageStudentCount.value} 名学生有记录`,
+      },
+      {
+        label: '无 AI 记录',
+        value: noAiSubmissionCount.value,
+        hint: '当前作业学生数',
+      },
+      {
+        label: '高频使用',
+        value: heavyAiSubmissionCount.value,
+        hint: '8 次及以上学生',
+      },
+    ];
+  }
+
+  if (loadingQuestionOverview.value) {
+    return [
+      { label: 'AI 提问次数', value: '统计中', hint: '全部作业' },
+      { label: '提问学生', value: '统计中', hint: '产生过提问记录' },
+      { label: '关键词命中', value: '统计中', hint: '按轮次去重' },
+    ];
+  }
+
+  return [
+    {
+      label: 'AI 提问次数',
+      value: overviewQuestionCount.value,
+      hint: '全部作业对话轮次',
+    },
+    {
+      label: '提问学生',
+      value: overviewStudentCount.value,
+      hint: '产生过提问记录',
+    },
+    {
+      label: '关键词命中',
+      value: overviewKeywordHits.value,
+      hint: `${overviewKeywordCount.value} 个关键词`,
+    },
+  ];
 });
 const assessmentCompactSummary = computed(() => {
   if (!selectedAssignment.value) {
@@ -246,7 +315,7 @@ onMounted(async () => {
     }
 
     user.value = me;
-    await loadAssignments();
+    await Promise.all([loadAssignments(), loadQuestionOverview()]);
     startAutoRefresh();
     setMessage('教师工作台已支持查看每位学生的 AI 使用分析。', 'success');
   } catch (error) {
@@ -841,32 +910,44 @@ function goLogin() {
     <main class="teacher-main">
       <section class="panel spotlight-card">
         <div class="spotlight-copy">
-          <p class="eyebrow">统计概览</p>
-          <h1>{{ selectedAssignment ? selectedAssignment.title : '请先选择或发布一份作业' }}</h1>
+          <p class="eyebrow">{{ selectedAssignment ? '当前作业统计' : '全部作业统计' }}</p>
+          <h1>{{ selectedAssignment ? selectedAssignment.title : (totalAssignments ? '全部作业总览' : '请先发布一份作业') }}</h1>
           <div v-if="selectedAssignment" class="current-assignment-strip">
             <span>当前作业</span>
             <strong>{{ selectedSubmittedCount }}/{{ selectedStudentCount }} 已提交</strong>
             <small>{{ selectedCompletionRate }}% 完成</small>
           </div>
+          <div v-else-if="totalAssignments" class="current-assignment-strip">
+            <span>全部作业</span>
+            <strong>{{ totalSubmissions }}/{{ totalDistributedCount }} 已提交</strong>
+            <small>{{ totalAssignments }} 份作业 · {{ overallCompletionRate }}% 完成</small>
+          </div>
           <p class="spotlight-description">
-            {{ selectedAssignment?.description || '教师页现在可以查看每位学生的提交内容、AI 使用次数、模型分布、时间线和学习过程总结。' }}
+            {{ selectedAssignment?.description || (totalAssignments ? '当前展示所有已发布作业的整体提交进度。点击下方任意作业后，可进入该作业的学生提交、AI 使用和评估详情。' : '发布作业后，这里会汇总全部作业的提交情况，并支持继续下钻到单份作业查看学生详情。') }}
           </p>
+          <div class="dashboard-ai-strip" aria-label="AI 问答统计">
+            <article v-for="item in dashboardAiInsightCards" :key="item.label">
+              <span>{{ item.label }}</span>
+              <strong>{{ item.value }}</strong>
+              <small>{{ item.hint }}</small>
+            </article>
+          </div>
           <div class="toolbar-message-wrap">
             <p :class="['toolbar-message', messageType]">{{ message }}</p>
           </div>
         </div>
 
         <div class="spotlight-progress">
-          <span>当前作业提交率</span>
-          <strong>{{ selectedCompletionRate }}%</strong>
+          <span>{{ selectedAssignment ? '当前作业提交率' : '全部作业提交率' }}</span>
+          <strong>{{ dashboardCompletionRate }}%</strong>
           <div class="progress-track">
-            <div class="progress-bar" :style="{ width: `${selectedCompletionRate}%` }"></div>
+            <div class="progress-bar" :style="{ width: `${dashboardCompletionRate}%` }"></div>
           </div>
           <div class="progress-meta">
-            <span>学生 {{ selectedStudentCount }}</span>
-            <span>已提交 {{ selectedSubmittedCount }}</span>
-            <span>未提交 {{ selectedPendingCount }}</span>
-            <span>附件 {{ selectedWithFileCount }}</span>
+            <span>{{ selectedAssignment ? '学生' : '总下发' }} {{ dashboardStudentCount }}</span>
+            <span>已提交 {{ dashboardSubmittedCount }}</span>
+            <span>未提交 {{ dashboardPendingCount }}</span>
+            <span>{{ dashboardExtraLabel }} {{ dashboardExtraCount }}</span>
           </div>
         </div>
       </section>
@@ -1199,10 +1280,11 @@ function goLogin() {
         <article class="panel submission-card">
           <div class="section-head">
             <div>
-              <p class="eyebrow">学生提交</p>
-              <h2>{{ selectedAssignment ? '点击学生查看提交与 AI 使用情况' : '请先选择一份作业' }}</h2>
+              <p class="eyebrow">{{ selectedAssignment ? '学生提交' : '作业总览' }}</p>
+              <h2>{{ selectedAssignment ? '点击学生查看提交与 AI 使用情况' : '全部已发布作业提交情况' }}</h2>
             </div>
             <span v-if="selectedAssignment" class="head-tag">{{ selectedSubmittedCount }}/{{ selectedStudentCount }} 已提交</span>
+            <span v-else-if="totalAssignments" class="head-tag">{{ totalAssignments }} 份作业</span>
           </div>
           <div v-if="selectedAssignment" class="submission-filter-tabs" aria-label="提交筛选">
             <button type="button" :class="{ active: submissionFilter === 'all' }" @click="submissionFilter = 'all'">
@@ -1225,9 +1307,39 @@ function goLogin() {
             </button>
           </div>
 
-          <div v-if="!selectedAssignment" class="empty-state">
-            <strong>尚未选择作业</strong>
-            <p>在左侧选择作业。</p>
+          <div v-if="!selectedAssignment && loadingAssignments" class="empty-state">
+            <strong>正在加载全部作业</strong>
+            <p>系统正在读取当前教师已经发布的作业。</p>
+          </div>
+
+          <div v-else-if="!selectedAssignment && !assignments.length" class="empty-state">
+            <strong>还没有可统计的作业</strong>
+            <p>发布第一份作业后，这里会展示全部作业的提交率和下发情况。</p>
+          </div>
+
+          <div v-else-if="!selectedAssignment" class="assignment-overview-list">
+            <button
+              v-for="item in assignmentOverviewItems"
+              :key="item.id"
+              type="button"
+              class="assignment-overview-item"
+              @click="selectAssignmentFromPicker(item.id)"
+            >
+              <div class="assignment-overview-head">
+                <div>
+                  <strong>{{ item.title }}</strong>
+                  <span>{{ formatTime(item.created_at) }}</span>
+                </div>
+                <em>{{ getAssignmentRate(item) }}%</em>
+              </div>
+              <div class="assignment-overview-track">
+                <i :style="{ width: `${getAssignmentRate(item)}%` }"></i>
+              </div>
+              <div class="assignment-overview-meta">
+                <span>{{ item.submitted_count }}/{{ item.student_count }} 已提交</span>
+                <span>未提交 {{ Math.max(item.student_count - item.submitted_count, 0) }}</span>
+              </div>
+            </button>
           </div>
 
           <div v-else-if="loadingSubmissions" class="empty-state">
